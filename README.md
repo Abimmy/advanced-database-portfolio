@@ -1,0 +1,60 @@
+# MikePay — MIT 8103 Advanced Database Systems Portfolio
+
+Individual practical database portfolio for MIT 8103 (Miva Open University, 2026/2027, First Semester).
+
+**Student:** Adewusi Michael (ID 301920446)
+
+## Selected case study: MikePay
+
+MikePay is a **simulated fintech platform**. All five portfolio activities use this one case study.
+
+| Item | Description |
+|---|---|
+| Nature of the system | Retail payments platform: customer accounts, deposits, withdrawals and fund transfers |
+| Users of the database | Customers, support/operations staff, auditors |
+| Major data stored | Customers, accounts, transactions, transfers, beneficiaries, audit records |
+| Key operations | Open an account, deposit, withdraw, transfer funds atomically, manage beneficiaries, audit balances |
+
+All data is **synthetic**. No real customer, banking or credential data is used anywhere in this repository.
+
+## Portfolio activities and status
+
+| # | Activity | Marks | Status |
+|---|---|---|---|
+| 1 | [Database Design and Modelling](portfolio-1-database-design/) | 7 | Not started |
+| 2 | [Query Processing and Optimisation](portfolio-2-query-optimisation/) | 7 | Not started |
+| 3 | [Transactions and Concurrency](portfolio-3-transactions-concurrency/) | 7 | Not started |
+| 4 | [NoSQL and Advanced Data Models](portfolio-4-nosql/) | 7 | Not started |
+| 5 | [Distributed and Cloud Database Exercise](portfolio-5-distributed-cloud/) | 6 | Not started |
+| - | [Final Documentation](final-documentation/) | 6 | Not started |
+
+Status is updated only when an activity has been implemented and tested.
+
+## Environment
+
+| Component | Detail |
+|---|---|
+| OS | Windows 11 Pro |
+| Relational DBMS | MariaDB 10.4.32 (XAMPP), InnoDB, default isolation REPEATABLE-READ |
+| Relational database name | `mikepay_db` |
+| NoSQL | MongoDB: not yet installed; setup to be decided and recorded in Portfolio 4 |
+| Version control | Git, GitHub (private repository) |
+
+## Repository structure
+
+```text
+├── portfolio-1-database-design/        sql/  diagrams/  evidence/
+├── portfolio-2-query-optimisation/     sql/  execution-plans/  evidence/
+├── portfolio-3-transactions-concurrency/  sql/  evidence/
+├── portfolio-4-nosql/                  scripts/  sample-data/  evidence/
+├── portfolio-5-distributed-cloud/      documentation/  configuration/  evidence/
+├── final-documentation/
+├── ai-use-log.md
+└── README.md
+```
+
+`.gitkeep` files only keep empty folders in Git and will be removed as real files are added.
+
+## AI use
+
+AI assistance (Claude Code) is being used as a learning and coding aid. See [ai-use-log.md](ai-use-log.md).
