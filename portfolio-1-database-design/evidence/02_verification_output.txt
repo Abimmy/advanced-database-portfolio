@@ -1,0 +1,219 @@
++----------------------------------+
+| section                          |
++----------------------------------+
+| --- 1. Tables and row counts --- |
++----------------------------------+
++---------------+-----------+
+| table_name    | row_count |
++---------------+-----------+
+| customers     |         8 |
+| accounts      |         9 |
+| transfers     |         6 |
+| transactions  |        20 |
+| beneficiaries |         5 |
+| audit_log     |        28 |
++---------------+-----------+
++------------------------------------------------------------+
+| section                                                    |
++------------------------------------------------------------+
+| --- 2. Primary key, unique and foreign key constraints --- |
++------------------------------------------------------------+
++---------------+-----------------------------------+-----------------+
+| table_name    | constraint_name                   | constraint_type |
++---------------+-----------------------------------+-----------------+
+| accounts      | PRIMARY                           | PRIMARY KEY     |
+| accounts      | uq_accounts_number                | UNIQUE          |
+| accounts      | fk_accounts_customer              | FOREIGN KEY     |
+| accounts      | ck_accounts_balance_nonneg        | CHECK           |
+| accounts      | ck_accounts_number_format         | CHECK           |
+| audit_log     | PRIMARY                           | PRIMARY KEY     |
+| audit_log     | fk_audit_log_account              | FOREIGN KEY     |
+| beneficiaries | PRIMARY                           | PRIMARY KEY     |
+| beneficiaries | uq_beneficiaries_customer_account | UNIQUE          |
+| beneficiaries | fk_beneficiaries_account          | FOREIGN KEY     |
+| beneficiaries | fk_beneficiaries_customer         | FOREIGN KEY     |
+| customers     | PRIMARY                           | PRIMARY KEY     |
+| customers     | uq_customers_email                | UNIQUE          |
+| customers     | uq_customers_phone                | UNIQUE          |
+| transactions  | PRIMARY                           | PRIMARY KEY     |
+| transactions  | fk_transactions_account           | FOREIGN KEY     |
+| transactions  | fk_transactions_transfer          | FOREIGN KEY     |
+| transactions  | ck_transactions_amount_positive   | CHECK           |
+| transactions  | ck_transactions_balance_nonneg    | CHECK           |
+| transactions  | ck_transactions_transfer_link     | CHECK           |
+| transfers     | PRIMARY                           | PRIMARY KEY     |
+| transfers     | uq_transfers_reference            | UNIQUE          |
+| transfers     | fk_transfers_destination          | FOREIGN KEY     |
+| transfers     | fk_transfers_source               | FOREIGN KEY     |
+| transfers     | ck_transfers_amount_positive      | CHECK           |
+| transfers     | ck_transfers_different_accounts   | CHECK           |
+| transfers     | ck_transfers_failure_reason       | CHECK           |
++---------------+-----------------------------------+-----------------+
++-------------------------------------------------------------------+
+| section                                                           |
++-------------------------------------------------------------------+
+| --- 3. Foreign keys: referenced table and delete/update rules --- |
++-------------------------------------------------------------------+
++---------------+---------------------------+------------------------+-----------------------+------------------------+-------------+-------------+
+| table_name    | constraint_name           | column_name            | referenced_table_name | referenced_column_name | delete_rule | update_rule |
++---------------+---------------------------+------------------------+-----------------------+------------------------+-------------+-------------+
+| accounts      | fk_accounts_customer      | customer_id            | customers             | customer_id            | RESTRICT    | CASCADE     |
+| audit_log     | fk_audit_log_account      | account_id             | accounts              | account_id             | RESTRICT    | CASCADE     |
+| beneficiaries | fk_beneficiaries_account  | beneficiary_account_id | accounts              | account_id             | RESTRICT    | CASCADE     |
+| beneficiaries | fk_beneficiaries_customer | customer_id            | customers             | customer_id            | CASCADE     | CASCADE     |
+| transactions  | fk_transactions_account   | account_id             | accounts              | account_id             | RESTRICT    | CASCADE     |
+| transactions  | fk_transactions_transfer  | transfer_id            | transfers             | transfer_id            | RESTRICT    | CASCADE     |
+| transfers     | fk_transfers_destination  | destination_account_id | accounts              | account_id             | RESTRICT    | CASCADE     |
+| transfers     | fk_transfers_source       | source_account_id      | accounts              | account_id             | RESTRICT    | CASCADE     |
++---------------+---------------------------+------------------------+-----------------------+------------------------+-------------+-------------+
++------------------------------+
+| section                      |
++------------------------------+
+| --- 4. CHECK constraints --- |
++------------------------------+
++--------------+---------------------------------+------------------------------------------------------------------------------------------+
+| table_name   | constraint_name                 | check_clause                                                                             |
++--------------+---------------------------------+------------------------------------------------------------------------------------------+
+| accounts     | ck_accounts_balance_nonneg      | `balance` >= 0                                                                           |
+| accounts     | ck_accounts_number_format       | `account_number` regexp '^[0-9]{10}$'                                                    |
+| transactions | ck_transactions_amount_positive | `amount` > 0                                                                             |
+| transactions | ck_transactions_balance_nonneg  | `balance_after` >= 0                                                                     |
+| transactions | ck_transactions_transfer_link   | `transaction_type` in ('TRANSFER_DEBIT','TRANSFER_CREDIT') = (`transfer_id` is not null) |
+| transfers    | ck_transfers_amount_positive    | `amount` > 0                                                                             |
+| transfers    | ck_transfers_different_accounts | `source_account_id` <> `destination_account_id`                                          |
+| transfers    | ck_transfers_failure_reason     | `status` <> 'FAILED' or `failure_reason` is not null                                     |
++--------------+---------------------------------+------------------------------------------------------------------------------------------+
++--------------------+
+| section            |
++--------------------+
+| --- 5. Indexes --- |
++--------------------+
++---------------+-----------------------------------+------------+------------------------------------+
+| table_name    | index_name                        | non_unique | columns_in_index                   |
++---------------+-----------------------------------+------------+------------------------------------+
+| accounts      | idx_accounts_customer             |          1 | customer_id                        |
+| accounts      | PRIMARY                           |          0 | account_id                         |
+| accounts      | uq_accounts_number                |          0 | account_number                     |
+| audit_log     | idx_audit_log_account_changed     |          1 | account_id,changed_at              |
+| audit_log     | PRIMARY                           |          0 | audit_id                           |
+| beneficiaries | idx_beneficiaries_account         |          1 | beneficiary_account_id             |
+| beneficiaries | PRIMARY                           |          0 | beneficiary_id                     |
+| beneficiaries | uq_beneficiaries_customer_account |          0 | customer_id,beneficiary_account_id |
+| customers     | PRIMARY                           |          0 | customer_id                        |
+| customers     | uq_customers_email                |          0 | email                              |
+| customers     | uq_customers_phone                |          0 | phone                              |
+| transactions  | idx_transactions_account_created  |          1 | account_id,created_at              |
+| transactions  | idx_transactions_transfer         |          1 | transfer_id                        |
+| transactions  | PRIMARY                           |          0 | transaction_id                     |
+| transfers     | idx_transfers_destination         |          1 | destination_account_id             |
+| transfers     | idx_transfers_source_created      |          1 | source_account_id,created_at       |
+| transfers     | idx_transfers_status_created      |          1 | status,created_at                  |
+| transfers     | PRIMARY                           |          0 | transfer_id                        |
+| transfers     | uq_transfers_reference            |          0 | reference                          |
++---------------+-----------------------------------+------------+------------------------------------+
++-----------------------------------------------------------------------------+
+| section                                                                     |
++-----------------------------------------------------------------------------+
+| --- 6. Integrity: account balance must equal the sum of its ledger rows --- |
++-----------------------------------------------------------------------------+
++------------+----------------+-----------+----------------+--------+
+| account_id | account_number | balance   | ledger_balance | result |
++------------+----------------+-----------+----------------+--------+
+|          1 | 1000000001     | 350000.00 |      350000.00 | OK     |
+|          2 | 1000000002     | 150000.00 |      150000.00 | OK     |
+|          3 | 1000000003     | 334999.50 |      334999.50 | OK     |
+|          4 | 1000000004     | 325000.25 |      325000.25 | OK     |
+|          5 | 1000000005     | 115000.00 |      115000.00 | OK     |
+|          6 | 1000000006     | 324999.75 |      324999.75 | OK     |
+|          7 | 1000000007     | 150000.00 |      150000.00 | OK     |
+|          8 | 1000000008     |  50000.00 |       50000.00 | OK     |
+|          9 | 1000000009     | 170000.00 |      170000.00 | OK     |
++------------+----------------+-----------+----------------+--------+
++---------------------------------------------------------------------------+
+| section                                                                   |
++---------------------------------------------------------------------------+
+| --- 7. Integrity: latest balance_after must equal the account balance --- |
++---------------------------------------------------------------------------+
++------------+-----------+--------------------+--------+
+| account_id | balance   | last_balance_after | result |
++------------+-----------+--------------------+--------+
+|          1 | 350000.00 |          350000.00 | OK     |
+|          2 | 150000.00 |          150000.00 | OK     |
+|          3 | 334999.50 |          334999.50 | OK     |
+|          4 | 325000.25 |          325000.25 | OK     |
+|          5 | 115000.00 |          115000.00 | OK     |
+|          6 | 324999.75 |          324999.75 | OK     |
+|          7 | 150000.00 |          150000.00 | OK     |
+|          8 |  50000.00 |           50000.00 | OK     |
+|          9 | 170000.00 |          170000.00 | OK     |
++------------+-----------+--------------------+--------+
++-----------------------------------------------------------------+
+| section                                                         |
++-----------------------------------------------------------------+
+| --- 8. Integrity: every transfer leaves a consistent ledger --- |
++-----------------------------------------------------------------+
++-------------+-----------+------------+------------+-------------+--------------+--------+
+| transfer_id | status    | amount     | debit_legs | credit_legs | net_movement | result |
++-------------+-----------+------------+------------+-------------+--------------+--------+
+|           1 | COMPLETED |  100000.00 |          1 |           1 |         0.00 | OK     |
+|           2 | COMPLETED |   45000.00 |          1 |           1 |         0.00 | OK     |
+|           3 | COMPLETED |   75000.25 |          1 |           1 |         0.00 | OK     |
+|           4 | COMPLETED |   30000.00 |          1 |           1 |         0.00 | OK     |
+|           5 | FAILED    | 5000000.00 |          0 |           0 |         0.00 | OK     |
+|           6 | FAILED    |   10000.00 |          0 |           0 |         0.00 | OK     |
++-------------+-----------+------------+------------+-------------+--------------+--------+
++---------------------------------------------+
+| section                                     |
++---------------------------------------------+
+| --- 9. Audit trail (filled by triggers) --- |
++---------------------------------------------+
++----------+------------+-----------------+-------------+-------------+----------------+
+| audit_id | account_id | action          | old_balance | new_balance | changed_by     |
++----------+------------+-----------------+-------------+-------------+----------------+
+|        1 |          1 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|        2 |          2 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|        3 |          3 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|        4 |          4 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|        5 |          5 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|        6 |          6 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|        7 |          7 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|        8 |          8 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|        9 |          9 | ACCOUNT_OPENED  |        NULL |        0.00 | root@localhost |
+|       10 |          1 | BALANCE_CHANGED |        0.00 |   500000.00 | root@localhost |
+|       11 |          2 | BALANCE_CHANGED |        0.00 |   150000.00 | root@localhost |
+|       12 |          3 | BALANCE_CHANGED |        0.00 |   300000.00 | root@localhost |
+|       13 |          4 | BALANCE_CHANGED |        0.00 |   250000.00 | root@localhost |
+|       14 |          5 | BALANCE_CHANGED |        0.00 |    80000.00 | root@localhost |
+|       15 |          6 | BALANCE_CHANGED |        0.00 |   400000.00 | root@localhost |
+|       16 |          7 | BALANCE_CHANGED |        0.00 |   120000.00 | root@localhost |
+|       17 |          8 | BALANCE_CHANGED |        0.00 |    50000.00 | root@localhost |
+|       18 |          9 | BALANCE_CHANGED |        0.00 |   200000.00 | root@localhost |
+|       19 |          1 | BALANCE_CHANGED |   500000.00 |   450000.00 | root@localhost |
+|       20 |          3 | BALANCE_CHANGED |   300000.00 |   279999.50 | root@localhost |
+|       21 |          5 | BALANCE_CHANGED |    80000.00 |    70000.00 | root@localhost |
+|       22 |          1 | BALANCE_CHANGED |   450000.00 |   350000.00 | root@localhost |
+|       23 |          3 | BALANCE_CHANGED |   279999.50 |   334999.50 | root@localhost |
+|       24 |          5 | BALANCE_CHANGED |    70000.00 |   115000.00 | root@localhost |
+|       25 |          6 | BALANCE_CHANGED |   400000.00 |   324999.75 | root@localhost |
+|       26 |          4 | BALANCE_CHANGED |   250000.00 |   325000.25 | root@localhost |
+|       27 |          9 | BALANCE_CHANGED |   200000.00 |   170000.00 | root@localhost |
+|       28 |          7 | BALANCE_CHANGED |   120000.00 |   150000.00 | root@localhost |
++----------+------------+-----------------+-------------+-------------+----------------+
++-------------------------------------------------------------------------------+
+| section                                                                       |
++-------------------------------------------------------------------------------+
+| --- 10. Sample business query: customers with their accounts and balances --- |
++-------------------------------------------------------------------------------+
++-------------+---------------+-----------------+----------------+--------------+----------------+-----------+
+| customer_id | customer      | customer_status | account_number | account_type | account_status | balance   |
++-------------+---------------+-----------------+----------------+--------------+----------------+-----------+
+|           1 | Adaeze Okafor | ACTIVE          | 1000000001     | SAVINGS      | ACTIVE         | 350000.00 |
+|           1 | Adaeze Okafor | ACTIVE          | 1000000002     | CURRENT      | ACTIVE         | 150000.00 |
+|           2 | Tunde Bello   | ACTIVE          | 1000000003     | CURRENT      | ACTIVE         | 334999.50 |
+|           3 | Chioma Eze    | ACTIVE          | 1000000004     | SAVINGS      | ACTIVE         | 325000.25 |
+|           4 | Ibrahim Musa  | ACTIVE          | 1000000005     | CURRENT      | ACTIVE         | 115000.00 |
+|           5 | Funke Adeyemi | ACTIVE          | 1000000006     | SAVINGS      | ACTIVE         | 324999.75 |
+|           6 | Emeka Nwosu   | ACTIVE          | 1000000007     | CURRENT      | ACTIVE         | 150000.00 |
+|           7 | Zainab Lawal  | SUSPENDED       | 1000000008     | SAVINGS      | FROZEN         |  50000.00 |
+|           8 | David Okoro   | ACTIVE          | 1000000009     | CURRENT      | ACTIVE         | 170000.00 |
++-------------+---------------+-----------------+----------------+--------------+----------------+-----------+

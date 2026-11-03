@@ -1,0 +1,250 @@
+--------------
+SET SESSION sql_mode = 'STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION'
+--------------
+
+Query OK, 0 rows affected (0.001 sec)
+
+--------------
+SELECT 'TEST 1: negative balance (CHECK ck_accounts_balance_nonneg)' AS test
+--------------
+
++-------------------------------------------------------------+
+| test                                                        |
++-------------------------------------------------------------+
+| TEST 1: negative balance (CHECK ck_accounts_balance_nonneg) |
++-------------------------------------------------------------+
+1 row in set (0.001 sec)
+
+ERROR 4025 (23000) at line 15: CONSTRAINT `ck_accounts_balance_nonneg` failed for `mikepay_db`.`accounts`
+--------------
+UPDATE accounts SET balance = -1.00 WHERE account_id = 2
+--------------
+
+--------------
+SELECT 'TEST 2: duplicate email (UNIQUE uq_customers_email)' AS test
+--------------
+
++-----------------------------------------------------+
+| test                                                |
++-----------------------------------------------------+
+| TEST 2: duplicate email (UNIQUE uq_customers_email) |
++-----------------------------------------------------+
+1 row in set (0.016 sec)
+
+ERROR 1062 (23000) at line 18: Duplicate entry 'adaeze.okafor@example.com' for key 'uq_customers_email'
+--------------
+INSERT INTO customers (first_name, last_name, email, phone)
+VALUES ('Test', 'Duplicate', 'adaeze.okafor@example.com', '08000009999')
+--------------
+
+--------------
+SELECT 'TEST 3: account for a customer that does not exist (FOREIGN KEY fk_accounts_customer)' AS test
+--------------
+
++---------------------------------------------------------------------------------------+
+| test                                                                                  |
++---------------------------------------------------------------------------------------+
+| TEST 3: account for a customer that does not exist (FOREIGN KEY fk_accounts_customer) |
++---------------------------------------------------------------------------------------+
+1 row in set (0.001 sec)
+
+ERROR 1452 (23000) at line 22: Cannot add or update a child row: a foreign key constraint fails (`mikepay_db`.`accounts`, CONSTRAINT `fk_accounts_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON UPDATE CASCADE)
+--------------
+INSERT INTO accounts (customer_id, account_number, account_type)
+VALUES (9999, '2000000001', 'SAVINGS')
+--------------
+
+--------------
+SELECT 'TEST 4: transfer from an account to itself (CHECK ck_transfers_different_accounts)' AS test
+--------------
+
++------------------------------------------------------------------------------------+
+| test                                                                               |
++------------------------------------------------------------------------------------+
+| TEST 4: transfer from an account to itself (CHECK ck_transfers_different_accounts) |
++------------------------------------------------------------------------------------+
+1 row in set (0.016 sec)
+
+ERROR 4025 (23000) at line 26: CONSTRAINT `ck_transfers_different_accounts` failed for `mikepay_db`.`transfers`
+--------------
+INSERT INTO transfers (reference, source_account_id, destination_account_id, amount)
+VALUES ('MPY-TEST-0001', 1, 1, 100.00)
+--------------
+
+--------------
+SELECT 'TEST 5: zero-amount transfer (CHECK ck_transfers_amount_positive)' AS test
+--------------
+
++-------------------------------------------------------------------+
+| test                                                              |
++-------------------------------------------------------------------+
+| TEST 5: zero-amount transfer (CHECK ck_transfers_amount_positive) |
++-------------------------------------------------------------------+
+1 row in set (0.020 sec)
+
+ERROR 4025 (23000) at line 30: CONSTRAINT `ck_transfers_amount_positive` failed for `mikepay_db`.`transfers`
+--------------
+INSERT INTO transfers (reference, source_account_id, destination_account_id, amount)
+VALUES ('MPY-TEST-0002', 1, 2, 0.00)
+--------------
+
+--------------
+SELECT 'TEST 6: failed transfer with no failure reason (CHECK ck_transfers_failure_reason)' AS test
+--------------
+
++------------------------------------------------------------------------------------+
+| test                                                                               |
++------------------------------------------------------------------------------------+
+| TEST 6: failed transfer with no failure reason (CHECK ck_transfers_failure_reason) |
++------------------------------------------------------------------------------------+
+1 row in set (0.012 sec)
+
+ERROR 4025 (23000) at line 34: CONSTRAINT `ck_transfers_failure_reason` failed for `mikepay_db`.`transfers`
+--------------
+INSERT INTO transfers (reference, source_account_id, destination_account_id, amount, status)
+VALUES ('MPY-TEST-0003', 1, 2, 100.00, 'FAILED')
+--------------
+
+--------------
+SELECT 'TEST 7: deposit linked to a transfer (CHECK ck_transactions_transfer_link)' AS test
+--------------
+
++----------------------------------------------------------------------------+
+| test                                                                       |
++----------------------------------------------------------------------------+
+| TEST 7: deposit linked to a transfer (CHECK ck_transactions_transfer_link) |
++----------------------------------------------------------------------------+
+1 row in set (0.042 sec)
+
+ERROR 4025 (23000) at line 38: CONSTRAINT `ck_transactions_transfer_link` failed for `mikepay_db`.`transactions`
+--------------
+INSERT INTO transactions (account_id, transfer_id, transaction_type, amount, balance_after)
+VALUES (1, 1, 'DEPOSIT', 100.00, 350100.00)
+--------------
+
+--------------
+SELECT 'TEST 8: delete a customer who still has accounts (FOREIGN KEY ON DELETE RESTRICT)' AS test
+--------------
+
++-----------------------------------------------------------------------------------+
+| test                                                                              |
++-----------------------------------------------------------------------------------+
+| TEST 8: delete a customer who still has accounts (FOREIGN KEY ON DELETE RESTRICT) |
++-----------------------------------------------------------------------------------+
+1 row in set (0.016 sec)
+
+ERROR 1451 (23000) at line 42: Cannot delete or update a parent row: a foreign key constraint fails (`mikepay_db`.`accounts`, CONSTRAINT `fk_accounts_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON UPDATE CASCADE)
+--------------
+DELETE FROM customers WHERE customer_id = 1
+--------------
+
+--------------
+SELECT 'TEST 9: invalid ENUM value (strict mode)' AS test
+--------------
+
++------------------------------------------+
+| test                                     |
++------------------------------------------+
+| TEST 9: invalid ENUM value (strict mode) |
++------------------------------------------+
+1 row in set (0.001 sec)
+
+ERROR 1265 (01000) at line 45: Data truncated for column 'status' at row 1
+--------------
+INSERT INTO customers (first_name, last_name, email, phone, status)
+VALUES ('Test', 'BadStatus', 'bad.status@example.com', '08000009998', 'DELETED')
+--------------
+
+--------------
+SELECT 'TEST 10: malformed account number (CHECK ck_accounts_number_format)' AS test
+--------------
+
++---------------------------------------------------------------------+
+| test                                                                |
++---------------------------------------------------------------------+
+| TEST 10: malformed account number (CHECK ck_accounts_number_format) |
++---------------------------------------------------------------------+
+1 row in set (0.001 sec)
+
+ERROR 4025 (23000) at line 49: CONSTRAINT `ck_accounts_number_format` failed for `mikepay_db`.`accounts`
+--------------
+INSERT INTO accounts (customer_id, account_number, account_type)
+VALUES (1, 'ABC123', 'SAVINGS')
+--------------
+
+--------------
+SELECT 'TEST 11: balance too large for DECIMAL(15,2)' AS test
+--------------
+
++----------------------------------------------+
+| test                                         |
++----------------------------------------------+
+| TEST 11: balance too large for DECIMAL(15,2) |
++----------------------------------------------+
+1 row in set (0.011 sec)
+
+ERROR 1264 (22003) at line 53: Out of range value for column 'balance' at row 1
+--------------
+UPDATE accounts SET balance = 100000000000000.00 WHERE account_id = 2
+--------------
+
+--------------
+SELECT 'TEST 12: duplicate beneficiary (UNIQUE uq_beneficiaries_customer_account)' AS test
+--------------
+
++---------------------------------------------------------------------------+
+| test                                                                      |
++---------------------------------------------------------------------------+
+| TEST 12: duplicate beneficiary (UNIQUE uq_beneficiaries_customer_account) |
++---------------------------------------------------------------------------+
+1 row in set (0.009 sec)
+
+ERROR 1062 (23000) at line 56: Duplicate entry '1-3' for key 'uq_beneficiaries_customer_account'
+--------------
+INSERT INTO beneficiaries (customer_id, beneficiary_account_id, nickname)
+VALUES (1, 3, 'Tunde again')
+--------------
+
+--------------
+SELECT 'TEST 13: NULL in a NOT NULL column' AS test
+--------------
+
++------------------------------------+
+| test                               |
++------------------------------------+
+| TEST 13: NULL in a NOT NULL column |
++------------------------------------+
+1 row in set (0.001 sec)
+
+ERROR 1048 (23000) at line 60: Column 'email' cannot be null
+--------------
+INSERT INTO customers (first_name, last_name, email, phone)
+VALUES ('Test', 'NoEmail', NULL, '08000009997')
+--------------
+
+--------------
+SELECT 'AFTER TESTS: row counts must be unchanged (8, 9, 6 transfers)' AS check_name
+--------------
+
++---------------------------------------------------------------+
+| check_name                                                    |
++---------------------------------------------------------------+
+| AFTER TESTS: row counts must be unchanged (8, 9, 6 transfers) |
++---------------------------------------------------------------+
+1 row in set (0.009 sec)
+
+--------------
+SELECT (SELECT COUNT(*) FROM customers) AS customers,
+       (SELECT COUNT(*) FROM accounts)  AS accounts,
+       (SELECT COUNT(*) FROM transfers) AS transfers,
+       (SELECT balance FROM accounts WHERE account_id = 2) AS account_2_balance
+--------------
+
++-----------+----------+-----------+-------------------+
+| customers | accounts | transfers | account_2_balance |
++-----------+----------+-----------+-------------------+
+|         8 |        9 |         6 |         150000.00 |
++-----------+----------+-----------+-------------------+
+1 row in set (0.045 sec)
+
+Bye
