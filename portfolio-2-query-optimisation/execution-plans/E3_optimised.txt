@@ -1,0 +1,30 @@
+E3 - Monthly volume report (range filter + aggregate)
+Variant: optimised (covering index (created_at, transaction_type, amount))
+DDL before variant: ALTER TABLE transactions ADD INDEX idx_transactions_created_cover (created_at, transaction_type, amount)
+
+QUERY
+SELECT transaction_type, COUNT(*) AS txn_count, SUM(amount) AS total_amount
+FROM transactions
+WHERE created_at >= '2026-03-01' AND created_at < '2026-04-01'
+GROUP BY transaction_type;
+
+EXPLAIN (estimated plan, query not executed)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
+1	SIMPLE	transactions	range	idx_transactions_created_cover	idx_transactions_created_cover	5	NULL	60992	Using where; Using index; Using temporary; Using filesort
+
+ANALYZE (actual plan, query executed; r_rows = rows actually read, r_filtered = % kept)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	r_rows	filtered	r_filtered	Extra
+1	SIMPLE	transactions	range	idx_transactions_created_cover	idx_transactions_created_cover	5	NULL	60992	32728.00	100.00	100.00	Using where; Using index; Using temporary; Using filesort
+
+HANDLER READ COUNTERS (rows read by the storage engine)
+Handler_read_first = 0
+Handler_read_key = 32729
+Handler_read_last = 0
+Handler_read_next = 32728
+Handler_read_prev = 0
+Handler_read_rnd = 4
+Handler_read_rnd_next = 5
+TOTAL = 65466
+
+SERVER-SIDE RUN TIMES, ms (run 1 = first run after DDL; runs 2-6 = repeats)
+81.793, 55.789, 58.407, 70.125, 111.730, 59.287

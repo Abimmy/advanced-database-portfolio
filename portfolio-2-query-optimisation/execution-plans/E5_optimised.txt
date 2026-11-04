@@ -1,0 +1,29 @@
+E5 - Transfers between a specific pair of accounts
+Variant: optimised (new index (source_account_id, destination_account_id))
+DDL before variant: ALTER TABLE transfers ADD INDEX idx_transfers_pair (source_account_id, destination_account_id)
+
+QUERY
+SELECT transfer_id, amount, status, created_at
+FROM transfers
+WHERE source_account_id = 1001 AND destination_account_id = 1045;
+
+EXPLAIN (estimated plan, query not executed)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
+1	SIMPLE	transfers	ref	idx_transfers_source_created,idx_transfers_destination,idx_transfers_pair	idx_transfers_pair	8	const,const	1	
+
+ANALYZE (actual plan, query executed; r_rows = rows actually read, r_filtered = % kept)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	r_rows	filtered	r_filtered	Extra
+1	SIMPLE	transfers	ref	idx_transfers_source_created,idx_transfers_destination,idx_transfers_pair	idx_transfers_pair	8	const,const	1	1.00	100.00	100.00	
+
+HANDLER READ COUNTERS (rows read by the storage engine)
+Handler_read_first = 0
+Handler_read_key = 1
+Handler_read_last = 0
+Handler_read_next = 1
+Handler_read_prev = 0
+Handler_read_rnd = 0
+Handler_read_rnd_next = 0
+TOTAL = 2
+
+SERVER-SIDE RUN TIMES, ms (run 1 = first run after DDL; runs 2-6 = repeats)
+0.518, 0.039, 0.042, 0.043, 0.043, 0.193

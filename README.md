@@ -22,7 +22,7 @@ All data is **synthetic**. No real customer, banking or credential data is used 
 | # | Activity | Marks | Status |
 |---|---|---|---|
 | 1 | [Database Design and Modelling](portfolio-1-database-design/) | 7 | Implemented and tested (MariaDB 10.4.32); evidence is captured command output |
-| 2 | [Query Processing and Optimisation](portfolio-2-query-optimisation/) | 7 | Not started |
+| 2 | [Query Processing and Optimisation](portfolio-2-query-optimisation/) | 7 | Implemented and tested (6 experiments on 780k ledger rows); evidence is captured command output |
 | 3 | [Transactions and Concurrency](portfolio-3-transactions-concurrency/) | 7 | Not started |
 | 4 | [NoSQL and Advanced Data Models](portfolio-4-nosql/) | 7 | Not started |
 | 5 | [Distributed and Cloud Database Exercise](portfolio-5-distributed-cloud/) | 6 | Not started |

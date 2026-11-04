@@ -1,0 +1,566 @@
+[
+  {
+    "id": "E1",
+    "title": "Account lookup by account number",
+    "results": [
+      {
+        "name": "baseline",
+        "detail": "no index on account_number",
+        "query": "SELECT account_id, customer_id, account_type, balance, status\nFROM accounts\nWHERE account_number = '2000040000'",
+        "ddl_seconds": 0.06,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\taccounts\tALL\tNULL\tNULL\tNULL\tNULL\t79989\tUsing where\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "accounts",
+            "type": "ALL",
+            "possible_keys": "NULL",
+            "key": "NULL",
+            "key_len": "NULL",
+            "ref": "NULL",
+            "rows": "79989",
+            "Extra": "Using where"
+          }
+        ],
+        "times_ms": [
+          103.91,
+          42.389,
+          112.82,
+          81.276,
+          67.986,
+          31.574
+        ],
+        "first_ms": 103.91,
+        "median_repeat_ms": 67.986,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\taccounts\tALL\tNULL\tNULL\tNULL\tNULL\t79989\t80009.00\t100.00\t0.00\tUsing where\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 0,
+          "Handler_read_last": 0,
+          "Handler_read_next": 0,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 0,
+          "Handler_read_rnd_next": 80010
+        },
+        "rows_read": 80010
+      },
+      {
+        "name": "optimised",
+        "detail": "UNIQUE index on account_number restored",
+        "query": "SELECT account_id, customer_id, account_type, balance, status\nFROM accounts\nWHERE account_number = '2000040000'",
+        "ddl_seconds": 0.29,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\taccounts\tconst\tuq_accounts_number\tuq_accounts_number\t40\tconst\t1\t\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "accounts",
+            "type": "const",
+            "possible_keys": "uq_accounts_number",
+            "key": "uq_accounts_number",
+            "key_len": "40",
+            "ref": "const",
+            "rows": "1",
+            "Extra": ""
+          }
+        ],
+        "times_ms": [
+          0.0051,
+          0.0063,
+          0.0034,
+          0.0037,
+          0.0031,
+          0.0028
+        ],
+        "first_ms": 0.0051,
+        "median_repeat_ms": 0.0034,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\taccounts\tconst\tuq_accounts_number\tuq_accounts_number\t40\tconst\t1\tNULL\t100.00\tNULL\t\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 1,
+          "Handler_read_last": 0,
+          "Handler_read_next": 0,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 0,
+          "Handler_read_rnd_next": 0
+        },
+        "rows_read": 1
+      }
+    ]
+  },
+  {
+    "id": "E2",
+    "title": "Account statement: latest 20 transactions of a busy account",
+    "results": [
+      {
+        "name": "baseline",
+        "detail": "index on account_id only",
+        "query": "SELECT transaction_id, transaction_type, amount, balance_after, created_at\nFROM transactions\nWHERE account_id = 1001\nORDER BY created_at DESC\nLIMIT 20",
+        "ddl_seconds": 1.6,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\ttransactions\tref\tidx_tmp_account\tidx_tmp_account\t4\tconst\t2218\tUsing where; Using filesort\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "transactions",
+            "type": "ref",
+            "possible_keys": "idx_tmp_account",
+            "key": "idx_tmp_account",
+            "key_len": "4",
+            "ref": "const",
+            "rows": "2218",
+            "Extra": "Using where; Using filesort"
+          }
+        ],
+        "times_ms": [
+          441.4,
+          233.37,
+          225.82,
+          216.49,
+          210.77,
+          183.81
+        ],
+        "first_ms": 441.4,
+        "median_repeat_ms": 216.49,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\ttransactions\tref\tidx_tmp_account\tidx_tmp_account\t4\tconst\t2218\t20.00\t100.00\t100.00\tUsing where; Using filesort\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 1,
+          "Handler_read_last": 0,
+          "Handler_read_next": 2218,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 0,
+          "Handler_read_rnd_next": 0
+        },
+        "rows_read": 2219
+      },
+      {
+        "name": "optimised",
+        "detail": "composite index (account_id, created_at)",
+        "query": "SELECT transaction_id, transaction_type, amount, balance_after, created_at\nFROM transactions\nWHERE account_id = 1001\nORDER BY created_at DESC\nLIMIT 20",
+        "ddl_seconds": 1.66,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\ttransactions\tref\tidx_transactions_account_created\tidx_transactions_account_created\t4\tconst\t2218\tUsing where\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "transactions",
+            "type": "ref",
+            "possible_keys": "idx_transactions_account_created",
+            "key": "idx_transactions_account_created",
+            "key_len": "4",
+            "ref": "const",
+            "rows": "2218",
+            "Extra": "Using where"
+          }
+        ],
+        "times_ms": [
+          4.8186,
+          0.2362,
+          0.1565,
+          0.1024,
+          2.2695,
+          0.112
+        ],
+        "first_ms": 4.8186,
+        "median_repeat_ms": 0.1565,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\ttransactions\tref\tidx_transactions_account_created\tidx_transactions_account_created\t4\tconst\t2218\t20.00\t100.00\t100.00\tUsing where\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 1,
+          "Handler_read_last": 0,
+          "Handler_read_next": 0,
+          "Handler_read_prev": 19,
+          "Handler_read_rnd": 0,
+          "Handler_read_rnd_next": 0
+        },
+        "rows_read": 20
+      }
+    ]
+  },
+  {
+    "id": "E3",
+    "title": "Monthly volume report (range filter + aggregate)",
+    "results": [
+      {
+        "name": "baseline",
+        "detail": "no index that starts with created_at",
+        "query": "SELECT transaction_type, COUNT(*) AS txn_count, SUM(amount) AS total_amount\nFROM transactions\nWHERE created_at >= '2026-03-01' AND created_at < '2026-04-01'\nGROUP BY transaction_type",
+        "ddl_seconds": null,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\ttransactions\tALL\tNULL\tNULL\tNULL\tNULL\t779204\tUsing where; Using temporary; Using filesort\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "transactions",
+            "type": "ALL",
+            "possible_keys": "NULL",
+            "key": "NULL",
+            "key_len": "NULL",
+            "ref": "NULL",
+            "rows": "779204",
+            "Extra": "Using where; Using temporary; Using filesort"
+          }
+        ],
+        "times_ms": [
+          461.9,
+          571.04,
+          665.15,
+          487.11,
+          543.97,
+          575.54
+        ],
+        "first_ms": 461.9,
+        "median_repeat_ms": 571.04,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\ttransactions\tALL\tNULL\tNULL\tNULL\tNULL\t779204\t780020.00\t100.00\t4.20\tUsing where; Using temporary; Using filesort\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 32728,
+          "Handler_read_last": 0,
+          "Handler_read_next": 0,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 4,
+          "Handler_read_rnd_next": 780026
+        },
+        "rows_read": 812758
+      },
+      {
+        "name": "optimised",
+        "detail": "covering index (created_at, transaction_type, amount)",
+        "query": "SELECT transaction_type, COUNT(*) AS txn_count, SUM(amount) AS total_amount\nFROM transactions\nWHERE created_at >= '2026-03-01' AND created_at < '2026-04-01'\nGROUP BY transaction_type",
+        "ddl_seconds": 1.91,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\ttransactions\trange\tidx_transactions_created_cover\tidx_transactions_created_cover\t5\tNULL\t60992\tUsing where; Using index; Using temporary; Using filesort\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "transactions",
+            "type": "range",
+            "possible_keys": "idx_transactions_created_cover",
+            "key": "idx_transactions_created_cover",
+            "key_len": "5",
+            "ref": "NULL",
+            "rows": "60992",
+            "Extra": "Using where; Using index; Using temporary; Using filesort"
+          }
+        ],
+        "times_ms": [
+          81.793,
+          55.789,
+          58.407,
+          70.125,
+          111.73,
+          59.287
+        ],
+        "first_ms": 81.793,
+        "median_repeat_ms": 59.287,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\ttransactions\trange\tidx_transactions_created_cover\tidx_transactions_created_cover\t5\tNULL\t60992\t32728.00\t100.00\t100.00\tUsing where; Using index; Using temporary; Using filesort\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 32729,
+          "Handler_read_last": 0,
+          "Handler_read_next": 32728,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 4,
+          "Handler_read_rnd_next": 5
+        },
+        "rows_read": 65466
+      }
+    ]
+  },
+  {
+    "id": "E4",
+    "title": "Single-day report: wrapping the column in a function vs a range",
+    "results": [
+      {
+        "name": "baseline",
+        "detail": "WHERE DATE(created_at) = '2026-03-15'",
+        "query": "SELECT COUNT(*) AS txn_count, SUM(amount) AS total_amount\nFROM transactions\nWHERE DATE(created_at) = '2026-03-15'",
+        "ddl_seconds": 1.42,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\ttransactions\tALL\tNULL\tNULL\tNULL\tNULL\t778516\tUsing where\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "transactions",
+            "type": "ALL",
+            "possible_keys": "NULL",
+            "key": "NULL",
+            "key_len": "NULL",
+            "ref": "NULL",
+            "rows": "778516",
+            "Extra": "Using where"
+          }
+        ],
+        "times_ms": [
+          560.35,
+          502.38,
+          385.74,
+          456.76,
+          516.24,
+          622.51
+        ],
+        "first_ms": 560.35,
+        "median_repeat_ms": 502.38,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\ttransactions\tALL\tNULL\tNULL\tNULL\tNULL\t778516\t780020.00\t100.00\t0.14\tUsing where\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 0,
+          "Handler_read_last": 0,
+          "Handler_read_next": 0,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 0,
+          "Handler_read_rnd_next": 780021
+        },
+        "rows_read": 780021
+      },
+      {
+        "name": "optimised",
+        "detail": "range: created_at >= '2026-03-15' AND created_at < '2026-03-16'",
+        "query": "SELECT COUNT(*) AS txn_count, SUM(amount) AS total_amount\nFROM transactions\nWHERE created_at >= '2026-03-15' AND created_at < '2026-03-16'",
+        "ddl_seconds": null,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\ttransactions\trange\tidx_tmp_created\tidx_tmp_created\t5\tNULL\t1094\tUsing index condition\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "transactions",
+            "type": "range",
+            "possible_keys": "idx_tmp_created",
+            "key": "idx_tmp_created",
+            "key_len": "5",
+            "ref": "NULL",
+            "rows": "1094",
+            "Extra": "Using index condition"
+          }
+        ],
+        "times_ms": [
+          4.9862,
+          2.5636,
+          1.4148,
+          3.174,
+          2.3783,
+          1.7557
+        ],
+        "first_ms": 4.9862,
+        "median_repeat_ms": 2.3783,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\ttransactions\trange\tidx_tmp_created\tidx_tmp_created\t5\tNULL\t1094\t1094.00\t100.00\t100.00\tUsing index condition\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 1,
+          "Handler_read_last": 0,
+          "Handler_read_next": 1094,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 0,
+          "Handler_read_rnd_next": 0
+        },
+        "rows_read": 1095
+      }
+    ]
+  },
+  {
+    "id": "E5",
+    "title": "Transfers between a specific pair of accounts",
+    "results": [
+      {
+        "name": "baseline",
+        "detail": "Portfolio 1 indexes only",
+        "query": "SELECT transfer_id, amount, status, created_at\nFROM transfers\nWHERE source_account_id = 1001 AND destination_account_id = 1045",
+        "ddl_seconds": null,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\ttransfers\tref\tidx_transfers_source_created,idx_transfers_destination\tidx_transfers_destination\t4\tconst\t3\tUsing where\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "transfers",
+            "type": "ref",
+            "possible_keys": "idx_transfers_source_created,idx_transfers_destination",
+            "key": "idx_transfers_destination",
+            "key_len": "4",
+            "ref": "const",
+            "rows": "3",
+            "Extra": "Using where"
+          }
+        ],
+        "times_ms": [
+          0.6906,
+          0.0417,
+          0.0826,
+          0.0727,
+          0.0814,
+          0.0887
+        ],
+        "first_ms": 0.6906,
+        "median_repeat_ms": 0.0814,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\ttransfers\tref\tidx_transfers_source_created,idx_transfers_destination\tidx_transfers_destination\t4\tconst\t3\t3.00\t0.35\t33.33\tUsing where\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 1,
+          "Handler_read_last": 0,
+          "Handler_read_next": 3,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 0,
+          "Handler_read_rnd_next": 0
+        },
+        "rows_read": 4
+      },
+      {
+        "name": "optimised",
+        "detail": "new index (source_account_id, destination_account_id)",
+        "query": "SELECT transfer_id, amount, status, created_at\nFROM transfers\nWHERE source_account_id = 1001 AND destination_account_id = 1045",
+        "ddl_seconds": 0.33,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\ttransfers\tref\tidx_transfers_source_created,idx_transfers_destination,idx_transfers_pair\tidx_transfers_pair\t8\tconst,const\t1\t\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "transfers",
+            "type": "ref",
+            "possible_keys": "idx_transfers_source_created,idx_transfers_destination,idx_transfers_pair",
+            "key": "idx_transfers_pair",
+            "key_len": "8",
+            "ref": "const,const",
+            "rows": "1",
+            "Extra": ""
+          }
+        ],
+        "times_ms": [
+          0.5181,
+          0.039,
+          0.0423,
+          0.0435,
+          0.0435,
+          0.1929
+        ],
+        "first_ms": 0.5181,
+        "median_repeat_ms": 0.0435,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\ttransfers\tref\tidx_transfers_source_created,idx_transfers_destination,idx_transfers_pair\tidx_transfers_pair\t8\tconst,const\t1\t1.00\t100.00\t100.00\t\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 1,
+          "Handler_read_last": 0,
+          "Handler_read_next": 1,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 0,
+          "Handler_read_rnd_next": 0
+        },
+        "rows_read": 2
+      }
+    ]
+  },
+  {
+    "id": "E6",
+    "title": "Top 10 senders by completed transfer value in Q1 2026 (join + aggregate)",
+    "results": [
+      {
+        "name": "baseline",
+        "detail": "existing index (status, created_at)",
+        "query": "SELECT a.account_number, SUM(t.amount) AS total_sent, COUNT(*) AS transfer_count\nFROM transfers t\nJOIN accounts a ON a.account_id = t.source_account_id\nWHERE t.status = 'COMPLETED' AND t.created_at >= '2026-01-01' AND t.created_at < '2026-04-01'\nGROUP BY t.source_account_id, a.account_number\nORDER BY total_sent DESC\nLIMIT 10",
+        "ddl_seconds": null,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\tt\tref\tidx_transfers_source_created,idx_transfers_status_created\tidx_transfers_status_created\t1\tconst\t55019\tUsing index condition; Using where; Using temporary; Using filesort\n1\tSIMPLE\ta\teq_ref\tPRIMARY\tPRIMARY\t4\tmikepay_db.t.source_account_id\t1\t\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "t",
+            "type": "ref",
+            "possible_keys": "idx_transfers_source_created,idx_transfers_status_created",
+            "key": "idx_transfers_status_created",
+            "key_len": "1",
+            "ref": "const",
+            "rows": "55019",
+            "Extra": "Using index condition; Using where; Using temporary; Using filesort"
+          },
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "a",
+            "type": "eq_ref",
+            "possible_keys": "PRIMARY",
+            "key": "PRIMARY",
+            "key_len": "4",
+            "ref": "mikepay_db.t.source_account_id",
+            "rows": "1",
+            "Extra": ""
+          }
+        ],
+        "times_ms": [
+          745.21,
+          615.55,
+          480.27,
+          618.93,
+          441.8,
+          408.65
+        ],
+        "first_ms": 745.21,
+        "median_repeat_ms": 480.27,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\tt\tref\tidx_transfers_source_created,idx_transfers_status_created\tidx_transfers_status_created\t1\tconst\t55019\t13582.00\t23.76\t100.00\tUsing index condition; Using where; Using temporary; Using filesort\n1\tSIMPLE\ta\teq_ref\tPRIMARY\tPRIMARY\t4\tmikepay_db.t.source_account_id\t1\t1.00\t100.00\t100.00\t\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 27164,
+          "Handler_read_last": 0,
+          "Handler_read_next": 13582,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 10,
+          "Handler_read_rnd_next": 11610
+        },
+        "rows_read": 52366
+      },
+      {
+        "name": "optimised",
+        "detail": "covering index (status, created_at, source_account_id, amount)",
+        "query": "SELECT a.account_number, SUM(t.amount) AS total_sent, COUNT(*) AS transfer_count\nFROM transfers t\nJOIN accounts a ON a.account_id = t.source_account_id\nWHERE t.status = 'COMPLETED' AND t.created_at >= '2026-01-01' AND t.created_at < '2026-04-01'\nGROUP BY t.source_account_id, a.account_number\nORDER BY total_sent DESC\nLIMIT 10",
+        "ddl_seconds": 0.36,
+        "explain_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tExtra\n1\tSIMPLE\tt\trange\tidx_transfers_source_created,idx_transfers_status_created,idx_transfers_status_created_cover\tidx_transfers_status_created_cover\t6\tNULL\t25340\tUsing where; Using index; Using temporary; Using filesort\n1\tSIMPLE\ta\teq_ref\tPRIMARY\tPRIMARY\t4\tmikepay_db.t.source_account_id\t1\t\n",
+        "explain_rows": [
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "t",
+            "type": "range",
+            "possible_keys": "idx_transfers_source_created,idx_transfers_status_created,idx_transfers_status_created_cover",
+            "key": "idx_transfers_status_created_cover",
+            "key_len": "6",
+            "ref": "NULL",
+            "rows": "25340",
+            "Extra": "Using where; Using index; Using temporary; Using filesort"
+          },
+          {
+            "id": "1",
+            "select_type": "SIMPLE",
+            "table": "a",
+            "type": "eq_ref",
+            "possible_keys": "PRIMARY",
+            "key": "PRIMARY",
+            "key_len": "4",
+            "ref": "mikepay_db.t.source_account_id",
+            "rows": "1",
+            "Extra": ""
+          }
+        ],
+        "times_ms": [
+          289.77,
+          49.406,
+          41.902,
+          94.915,
+          60.839,
+          51.934
+        ],
+        "first_ms": 289.77,
+        "median_repeat_ms": 51.934,
+        "analyze_text": "id\tselect_type\ttable\ttype\tpossible_keys\tkey\tkey_len\tref\trows\tr_rows\tfiltered\tr_filtered\tExtra\n1\tSIMPLE\tt\trange\tidx_transfers_source_created,idx_transfers_status_created,idx_transfers_status_created_cover\tidx_transfers_status_created_cover\t6\tNULL\t25340\t13582.00\t100.00\t100.00\tUsing where; Using index; Using temporary; Using filesort\n1\tSIMPLE\ta\teq_ref\tPRIMARY\tPRIMARY\t4\tmikepay_db.t.source_account_id\t1\t1.00\t100.00\t100.00\t\n",
+        "handlers": {
+          "Handler_read_first": 0,
+          "Handler_read_key": 27164,
+          "Handler_read_last": 0,
+          "Handler_read_next": 13582,
+          "Handler_read_prev": 0,
+          "Handler_read_rnd": 10,
+          "Handler_read_rnd_next": 11610
+        },
+        "rows_read": 52366
+      }
+    ]
+  }
+]

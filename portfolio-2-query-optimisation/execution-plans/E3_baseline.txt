@@ -1,0 +1,30 @@
+E3 - Monthly volume report (range filter + aggregate)
+Variant: baseline (no index that starts with created_at)
+DDL before variant: none
+
+QUERY
+SELECT transaction_type, COUNT(*) AS txn_count, SUM(amount) AS total_amount
+FROM transactions
+WHERE created_at >= '2026-03-01' AND created_at < '2026-04-01'
+GROUP BY transaction_type;
+
+EXPLAIN (estimated plan, query not executed)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
+1	SIMPLE	transactions	ALL	NULL	NULL	NULL	NULL	779204	Using where; Using temporary; Using filesort
+
+ANALYZE (actual plan, query executed; r_rows = rows actually read, r_filtered = % kept)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	r_rows	filtered	r_filtered	Extra
+1	SIMPLE	transactions	ALL	NULL	NULL	NULL	NULL	779204	780020.00	100.00	4.20	Using where; Using temporary; Using filesort
+
+HANDLER READ COUNTERS (rows read by the storage engine)
+Handler_read_first = 0
+Handler_read_key = 32728
+Handler_read_last = 0
+Handler_read_next = 0
+Handler_read_prev = 0
+Handler_read_rnd = 4
+Handler_read_rnd_next = 780026
+TOTAL = 812758
+
+SERVER-SIDE RUN TIMES, ms (run 1 = first run after DDL; runs 2-6 = repeats)
+461.900, 571.040, 665.150, 487.110, 543.970, 575.540

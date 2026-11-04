@@ -1,0 +1,29 @@
+E1 - Account lookup by account number
+Variant: optimised (UNIQUE index on account_number restored)
+DDL before variant: ALTER TABLE accounts ADD CONSTRAINT uq_accounts_number UNIQUE (account_number)
+
+QUERY
+SELECT account_id, customer_id, account_type, balance, status
+FROM accounts
+WHERE account_number = '2000040000';
+
+EXPLAIN (estimated plan, query not executed)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
+1	SIMPLE	accounts	const	uq_accounts_number	uq_accounts_number	40	const	1	
+
+ANALYZE (actual plan, query executed; r_rows = rows actually read, r_filtered = % kept)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	r_rows	filtered	r_filtered	Extra
+1	SIMPLE	accounts	const	uq_accounts_number	uq_accounts_number	40	const	1	NULL	100.00	NULL	
+
+HANDLER READ COUNTERS (rows read by the storage engine)
+Handler_read_first = 0
+Handler_read_key = 1
+Handler_read_last = 0
+Handler_read_next = 0
+Handler_read_prev = 0
+Handler_read_rnd = 0
+Handler_read_rnd_next = 0
+TOTAL = 1
+
+SERVER-SIDE RUN TIMES, ms (run 1 = first run after DDL; runs 2-6 = repeats)
+0.005, 0.006, 0.003, 0.004, 0.003, 0.003

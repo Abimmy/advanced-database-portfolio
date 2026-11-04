@@ -1,0 +1,31 @@
+E2 - Account statement: latest 20 transactions of a busy account
+Variant: optimised (composite index (account_id, created_at))
+DDL before variant: ALTER TABLE transactions DROP INDEX idx_tmp_account, ADD INDEX idx_transactions_account_created (account_id, created_at)
+
+QUERY
+SELECT transaction_id, transaction_type, amount, balance_after, created_at
+FROM transactions
+WHERE account_id = 1001
+ORDER BY created_at DESC
+LIMIT 20;
+
+EXPLAIN (estimated plan, query not executed)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
+1	SIMPLE	transactions	ref	idx_transactions_account_created	idx_transactions_account_created	4	const	2218	Using where
+
+ANALYZE (actual plan, query executed; r_rows = rows actually read, r_filtered = % kept)
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	r_rows	filtered	r_filtered	Extra
+1	SIMPLE	transactions	ref	idx_transactions_account_created	idx_transactions_account_created	4	const	2218	20.00	100.00	100.00	Using where
+
+HANDLER READ COUNTERS (rows read by the storage engine)
+Handler_read_first = 0
+Handler_read_key = 1
+Handler_read_last = 0
+Handler_read_next = 0
+Handler_read_prev = 19
+Handler_read_rnd = 0
+Handler_read_rnd_next = 0
+TOTAL = 20
+
+SERVER-SIDE RUN TIMES, ms (run 1 = first run after DDL; runs 2-6 = repeats)
+4.819, 0.236, 0.157, 0.102, 2.269, 0.112
