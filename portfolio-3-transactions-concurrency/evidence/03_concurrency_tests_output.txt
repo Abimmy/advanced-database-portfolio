@@ -1,0 +1,376 @@
+[   0.00s] 
+[   0.00s] ====================================================================================================
+[   0.00s] MikePay Portfolio 3 - concurrency test run
+[   0.00s] ====================================================================================================
+[   0.11s] Server: 10.4.32-MariaDB
+[   0.16s] Default isolation: REPEATABLE-READ; innodb_lock_wait_timeout = 50 s; innodb_deadlock_detect = 1
+[   0.16s] Test data: accounts 900001-900005 only; Portfolio 2 bulk data is not touched.
+[   0.16s] 
+[   0.16s] ====================================================================================================
+[   0.16s] S1  LOST UPDATE: two users change the same balance at the same time (isolation: REPEATABLE READ)
+[   0.16s] ====================================================================================================
+[   0.16s] Account 900001 starts at 1000.00. User 1 takes 200.00 and user 2 takes 100.00, so the
+[   0.16s] correct final balance is 700.00.
+[   0.35s] Server default isolation level: REPEATABLE-READ
+[   0.35s] 
+[   0.35s] --- S1-A  UNSAFE: the application reads the balance, calculates, then writes back a number
+[   0.56s] s1> START TRANSACTION   =>   OK, 0 row(s) affected
+[   0.56s] s1> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[   0.56s] s2> START TRANSACTION   =>   OK, 0 row(s) affected
+[   0.56s] s2> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[   0.56s] s2> UPDATE accounts SET balance = 900.00 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[   0.57s] s2> COMMIT   =>   OK, 0 row(s) affected
+[   0.57s] s1> UPDATE accounts SET balance = 800.00 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[   0.58s] s1> COMMIT   =>   OK, 0 row(s) affected
+[   0.58s] Final balance = 800.00; correct answer = 700.00
+[   0.58s] audit_log for the account (written by the trigger):
+[   0.58s]       (161427, Decimal('1000.00'), Decimal('900.00'))
+[   0.58s]       (161428, Decimal('900.00'), Decimal('800.00'))
+[   0.58s] CHECK PASS: S1-A unsafe read-modify-write LOSES an update (final balance is not 700.00)
+[   0.58s] 
+[   0.58s] --- S1-B  SAFE: let the database do the arithmetic: UPDATE ... SET balance = balance - x
+[   0.63s] s1> START TRANSACTION   =>   OK, 0 row(s) affected
+[   0.64s] s1> UPDATE accounts SET balance = balance - 200 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[   0.66s] s2> START TRANSACTION   =>   OK, 0 row(s) affected
+[   0.66s] s2> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   ...sent; waiting for the server (not returned yet)
+[   1.27s]       (s2's UPDATE: still waiting after 0.6s, so it is BLOCKED by a lock)
+[   1.28s] s2> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected   (took 0.62s)
+[   1.29s] s1> COMMIT   =>   OK, 0 row(s) affected
+[   1.31s] s2> COMMIT   =>   OK, 0 row(s) affected
+[   1.33s] Final balance = 700.00
+[   1.33s] CHECK PASS: S1-B s2's UPDATE was blocked until s1 committed
+[   1.33s] CHECK PASS: S1-B atomic relative UPDATE keeps both changes (final balance 700.00)
+[   1.33s] 
+[   1.33s] --- S1-C  SAFE: lock the row first with SELECT ... FOR UPDATE, then read, calculate, write
+[   1.56s] s1> START TRANSACTION   =>   OK, 0 row(s) affected
+[   1.58s] s1> SELECT balance FROM accounts WHERE account_id = 900001 FOR UPDATE   =>   1000.00
+[   1.61s] s2> START TRANSACTION   =>   OK, 0 row(s) affected
+[   1.61s] s2> SELECT balance FROM accounts WHERE account_id = 900001 FOR UPDATE   ...sent; waiting for the server (not returned yet)
+[   2.23s]       (s2's SELECT ... FOR UPDATE: still waiting after 0.6s, so it is BLOCKED by a lock)
+[   2.24s] s1> UPDATE accounts SET balance = 800.00 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[   2.26s] s2> SELECT balance FROM accounts WHERE account_id = 900001 FOR UPDATE   =>   800.00   (took 0.62s)
+[   2.26s] s1> COMMIT   =>   OK, 0 row(s) affected
+[   2.26s] s2 finally read 800.00: the NEW balance, not the stale 1000.00
+[   2.26s] s2> UPDATE accounts SET balance = 700.00 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[   2.26s] s2> COMMIT   =>   OK, 0 row(s) affected
+[   2.26s] Final balance = 700.00
+[   2.26s] CHECK PASS: S1-C locking read made s2 wait, and it then saw the committed balance
+[   2.26s] CHECK PASS: S1-C read-modify-write is safe when the row is locked first (final balance 700.00)
+[   2.26s] 
+[   2.26s] ====================================================================================================
+[   2.26s] S2  CONCURRENT OVERDRAW: two transfers of 700.00 race for an account that holds 1000.00
+[   2.26s] ====================================================================================================
+[   2.26s] Only one of them can be paid. sp_transfer_funds locks the account row before it checks the balance.
+[   2.26s] 
+[   2.26s] --- S2-A  sp_transfer_funds called by two sessions at the same instant, 10 rounds
+[   2.56s] round  1: x -> COMPLETED (Transfer completed), y -> FAILED (Insufficient funds); balance of 900001 = 300.00  ok
+[   2.71s] round  2: x -> FAILED (Insufficient funds), y -> COMPLETED (Transfer completed); balance of 900001 = 300.00  ok
+[   2.93s] round  3: x -> COMPLETED (Transfer completed), y -> FAILED (Insufficient funds); balance of 900001 = 300.00  ok
+[   3.14s] round  4: x -> FAILED (Insufficient funds), y -> COMPLETED (Transfer completed); balance of 900001 = 300.00  ok
+[   3.32s] round  5: x -> FAILED (Insufficient funds), y -> COMPLETED (Transfer completed); balance of 900001 = 300.00  ok
+[   3.47s] round  6: x -> FAILED (Insufficient funds), y -> COMPLETED (Transfer completed); balance of 900001 = 300.00  ok
+[   3.56s] round  7: x -> FAILED (Insufficient funds), y -> COMPLETED (Transfer completed); balance of 900001 = 300.00  ok
+[   3.65s] round  8: x -> COMPLETED (Transfer completed), y -> FAILED (Insufficient funds); balance of 900001 = 300.00  ok
+[   3.74s] round  9: x -> COMPLETED (Transfer completed), y -> FAILED (Insufficient funds); balance of 900001 = 300.00  ok
+[   3.82s] round 10: x -> FAILED (Insufficient funds), y -> COMPLETED (Transfer completed); balance of 900001 = 300.00  ok
+[   3.87s] INTEGRITY (after S2-A, last round):
+[   3.87s]       negative balances                                          problems = 0
+[   3.87s]       balance differs from latest ledger balance_after           problems = 0
+[   3.87s]       completed transfer without exactly 2 ledger legs           problems = 0
+[   3.87s]       ledger leg amount or account differs from its transfer     problems = 0
+[   3.87s]       failed or pending transfer that has ledger rows            problems = 0
+[   3.87s]       total money in test accounts = 4350.00   (expected 4350.00)
+[   3.87s] CHECK PASS: S2-A in all 10 rounds exactly one transfer completed, one failed, balance 300.00
+[   3.87s] CHECK PASS: S2-A integrity checks pass and no money was created or lost
+[   3.87s] 
+[   3.87s] --- S2-B  NO row lock: both sessions check the balance, then both try to debit 700.00
+[   4.98s] s1> START TRANSACTION   =>   OK, 0 row(s) affected
+[   4.99s] s2> START TRANSACTION   =>   OK, 0 row(s) affected
+[   5.00s] s1> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[   5.01s] s2> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[   5.01s]       Both sessions saw 1000.00 >= 700.00 and decide to go ahead.
+[   5.02s] s1> UPDATE accounts SET balance = balance - 700 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[   5.02s] s2> UPDATE accounts SET balance = balance - 700 WHERE account_id = 900001   ...sent; waiting for the server (not returned yet)
+[   5.64s]       (s2's UPDATE: still waiting after 0.6s, so it is BLOCKED by a lock)
+[   5.64s] s2> UPDATE accounts SET balance = balance - 700 WHERE account_id = 900001   =>   ERROR 4025: CONSTRAINT `ck_accounts_balance_nonneg` failed for `mikepay_db`.`accounts`   (took 0.61s)
+[   5.64s] s1> COMMIT   =>   OK, 0 row(s) affected
+[   5.64s] s2> ROLLBACK   =>   OK, 0 row(s) affected
+[   5.64s] Final balance = 300.00
+[   5.64s] The CHECK (balance >= 0) constraint stopped the overdraft, but the application only got
+[   5.64s] a raw constraint error instead of a clean 'insufficient funds' answer. Locking first is better.
+[   5.64s] CHECK PASS: S2-B without a lock the second debit is stopped only by the CHECK constraint
+[   5.64s] 
+[   5.65s] ====================================================================================================
+[   5.65s] S3  DEADLOCK: two sessions lock the same two accounts in opposite order
+[   5.65s] ====================================================================================================
+[   6.51s] s1> START TRANSACTION   =>   OK, 0 row(s) affected
+[   6.52s] s2> START TRANSACTION   =>   OK, 0 row(s) affected
+[   6.52s] s1> SELECT balance FROM accounts WHERE account_id = 900001 FOR UPDATE   =>   1000.00
+[   6.52s] s2> SELECT balance FROM accounts WHERE account_id = 900002 FOR UPDATE   =>   500.00
+[   6.52s] s1> SELECT balance FROM accounts WHERE account_id = 900002 FOR UPDATE   ...sent; waiting for the server (not returned yet)
+[   7.13s]       (s1 waiting for account 900002: still waiting after 0.6s, so it is BLOCKED by a lock)
+[   7.13s] s1> SELECT balance FROM accounts WHERE account_id = 900002 FOR UPDATE   =>   500.00   (took 0.61s)
+[   7.14s] s2> SELECT balance FROM accounts WHERE account_id = 900001 FOR UPDATE   =>   ERROR 1213: Deadlock found when trying to get lock; try restarting transaction
+[   7.14s] InnoDB chose the victim: ['s2']
+[   7.14s] s1> COMMIT   =>   OK, 0 row(s) affected
+[   7.14s]       s2 was rolled back by the server and must retry its whole transaction
+[   7.14s] 
+[   7.14s] Excerpt of SHOW ENGINE INNODB STATUS, section LATEST DETECTED DEADLOCK
+[   7.14s] (the hexadecimal record dumps are omitted; everything else is unedited):
+[   7.14s]       | LATEST DETECTED DEADLOCK
+[   7.14s]       | ------------------------
+[   7.14s]       | 2026-11-05 12:49:10 0xadd8
+[   7.14s]       | *** (1) TRANSACTION:
+[   7.14s]       | TRANSACTION 11602, ACTIVE 1 sec starting index read
+[   7.14s]       | mysql tables in use 1, locked 1
+[   7.14s]       | LOCK WAIT 3 lock struct(s), heap size 1128, 2 row lock(s)
+[   7.14s]       | MySQL thread id 1673, OS thread handle 40828, query id 320696 localhost 127.0.0.1 root Statistics
+[   7.14s]       | SELECT balance FROM accounts WHERE account_id = 900002 FOR UPDATE
+[   7.14s]       | *** (1) WAITING FOR THIS LOCK TO BE GRANTED:
+[   7.14s]       | RECORD LOCKS space id 249 page no 644 n bits 216 index PRIMARY of table `mikepay_db`.`accounts` trx id 11602 lock_mode X locks rec but not gap waiting
+[   7.14s]       | 
+[   7.14s]       | *** (2) TRANSACTION:
+[   7.14s]       | TRANSACTION 11603, ACTIVE 1 sec starting index read
+[   7.14s]       | mysql tables in use 1, locked 1
+[   7.14s]       | 3 lock struct(s), heap size 1128, 2 row lock(s)
+[   7.14s]       | MySQL thread id 1674, OS thread handle 44504, query id 320697 localhost 127.0.0.1 root Statistics
+[   7.14s]       | SELECT balance FROM accounts WHERE account_id = 900001 FOR UPDATE
+[   7.14s]       | *** (2) HOLDS THE LOCK(S):
+[   7.14s]       | RECORD LOCKS space id 249 page no 644 n bits 216 index PRIMARY of table `mikepay_db`.`accounts` trx id 11603 lock_mode X locks rec but not gap
+[   7.14s]       | 
+[   7.14s]       | *** (2) WAITING FOR THIS LOCK TO BE GRANTED:
+[   7.14s]       | RECORD LOCKS space id 249 page no 644 n bits 216 index PRIMARY of table `mikepay_db`.`accounts` trx id 11603 lock_mode X locks rec but not gap waiting
+[   7.14s]       | 
+[   7.14s]       | *** WE ROLL BACK TRANSACTION (2)
+[   7.14s] CHECK PASS: S3 the server detected the deadlock and aborted exactly one session (error 1213)
+[   7.15s] 
+[   7.15s] ====================================================================================================
+[   7.15s] S4  DEADLOCKS INSIDE THE TRANSFER PROCEDURE: lock-as-given vs lock-in-id-order
+[   7.15s] ====================================================================================================
+[   7.15s] Each round sends 10.00 from 900001 to 900002 and 10.00 from 900002 to 900001 at the same instant.
+[   7.15s] A 0.2 s pause between the two row locks is used in BOTH variants so the overlap is repeatable.
+[   7.15s] The only difference is the lock order (p_lock_ordered = 0 or 1).
+[   7.15s] 
+[   7.15s] --- S4-A  p_lock_ordered = 0: lock the source first, then the destination (the naive way)
+[   8.02s] as-given round  1: A->B COMPLETED B->A ERROR     <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[   8.26s] as-given round  2: A->B ERROR     B->A COMPLETED <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[   8.55s] as-given round  3: A->B ERROR     B->A COMPLETED <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[   8.93s] as-given round  4: A->B COMPLETED B->A ERROR     <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[   9.23s] as-given round  5: A->B ERROR     B->A COMPLETED <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[   9.49s] as-given round  6: A->B COMPLETED B->A ERROR     <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[   9.75s] as-given round  7: A->B COMPLETED B->A ERROR     <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[  10.03s] as-given round  8: A->B COMPLETED B->A ERROR     <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[  10.29s] as-given round  9: A->B ERROR     B->A COMPLETED <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[  10.55s] as-given round 10: A->B COMPLETED B->A ERROR     <- Rolled back. MariaDB error 1213: Deadlock found when trying to get loc
+[  10.58s] as-given: completed=10 deadlock-victims=10 other=0 (20 attempts)
+[  10.59s] INTEGRITY (after S4-A (deadlock victims were rolled back whole)):
+[  10.59s]       negative balances                                          problems = 0
+[  10.59s]       balance differs from latest ledger balance_after           problems = 0
+[  10.59s]       completed transfer without exactly 2 ledger legs           problems = 0
+[  10.59s]       ledger leg amount or account differs from its transfer     problems = 0
+[  10.59s]       failed or pending transfer that has ledger rows            problems = 0
+[  10.59s]       total money in test accounts = 4350.00   (expected 4350.00)
+[  10.59s] 
+[  10.59s] --- S4-B  p_lock_ordered = 1: always lock the lower account id first (what sp_transfer_funds does)
+[  11.63s] ordered round  1: A->B COMPLETED B->A COMPLETED 
+[  12.09s] ordered round  2: A->B COMPLETED B->A COMPLETED 
+[  12.56s] ordered round  3: A->B COMPLETED B->A COMPLETED 
+[  13.04s] ordered round  4: A->B COMPLETED B->A COMPLETED 
+[  13.52s] ordered round  5: A->B COMPLETED B->A COMPLETED 
+[  13.96s] ordered round  6: A->B COMPLETED B->A COMPLETED 
+[  14.42s] ordered round  7: A->B COMPLETED B->A COMPLETED 
+[  14.88s] ordered round  8: A->B COMPLETED B->A COMPLETED 
+[  15.30s] ordered round  9: A->B COMPLETED B->A COMPLETED 
+[  15.73s] ordered round 10: A->B COMPLETED B->A COMPLETED 
+[  15.74s] ordered: completed=20 deadlock-victims=0 other=0 (20 attempts)
+[  15.76s] INTEGRITY (after S4-B):
+[  15.76s]       negative balances                                          problems = 0
+[  15.76s]       balance differs from latest ledger balance_after           problems = 0
+[  15.76s]       completed transfer without exactly 2 ledger legs           problems = 0
+[  15.76s]       ledger leg amount or account differs from its transfer     problems = 0
+[  15.76s]       failed or pending transfer that has ledger rows            problems = 0
+[  15.76s]       total money in test accounts = 4350.00   (expected 4350.00)
+[  15.76s] CHECK PASS: S4-A locking in the order given produced deadlocks (error 1213)
+[  15.76s] CHECK PASS: S4-A deadlock victims left no half-done transfers (integrity ok, money conserved)
+[  15.76s] CHECK PASS: S4-B locking in id order produced zero deadlocks and all 20 transfers completed
+[  15.76s] CHECK PASS: S4-B integrity checks pass and money is conserved
+[  15.76s] 
+[  15.76s] --- S4-C  STRESS TEST: 8 sessions x 30 random transfers (240) among accounts 900001-900004, sp_transfer_funds
+[  18.53s] finished 240 transfers in 2.73s with 8 concurrent sessions
+[  18.53s]       COMPLETED: 204
+[  18.53s]       FAILED: 36
+[  18.53s] ledger rows = 408 (expected 2 x completed = 408)
+[  18.56s] INTEGRITY (after S4-C stress test):
+[  18.56s]       negative balances                                          problems = 0
+[  18.56s]       balance differs from latest ledger balance_after           problems = 0
+[  18.56s]       completed transfer without exactly 2 ledger legs           problems = 0
+[  18.56s]       ledger leg amount or account differs from its transfer     problems = 0
+[  18.56s]       failed or pending transfer that has ledger rows            problems = 0
+[  18.56s]       total money in test accounts = 4350.00   (expected 4350.00)
+[  18.56s] CHECK PASS: S4-C all 240 requests were answered (COMPLETED or FAILED) with no ERROR/deadlock
+[  18.56s] CHECK PASS: S4-C ledger has exactly two rows per completed transfer
+[  18.56s] CHECK PASS: S4-C integrity checks pass and total money is unchanged after 240 concurrent transfers
+[  18.56s] 
+[  18.56s] ====================================================================================================
+[  18.56s] S5  ISOLATION LEVELS: what a reader sees while a writer is active (account 900001 = 1000.00)
+[  18.56s] ====================================================================================================
+[  18.56s] Each anomaly is tried at every level. A lock wait timeout of 2 s is set on the sessions so that
+[  18.56s] a session that is BLOCKED (which happens at SERIALIZABLE) ends the test instead of waiting 50 s.
+[  18.56s] 
+[  18.56s] --- S5-A  DIRTY READ: can a reader see a change that has not been committed (and may be rolled back)?
+[  19.25s] [reader isolation = READ UNCOMMITTED]
+[  19.26s] writer> START TRANSACTION   =>   OK, 0 row(s) affected
+[  19.26s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  19.26s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  19.26s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   900.00
+[  19.27s] writer> ROLLBACK   =>   OK, 0 row(s) affected
+[  19.27s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  19.28s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  19.28s]       reader saw 900.00 while the change was uncommitted; after the writer's ROLLBACK it sees 1000.00
+[  19.81s] [reader isolation = READ COMMITTED]
+[  19.81s] writer> START TRANSACTION   =>   OK, 0 row(s) affected
+[  19.81s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  19.82s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  19.82s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  19.82s] writer> ROLLBACK   =>   OK, 0 row(s) affected
+[  19.82s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  19.82s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  19.82s]       reader saw 1000.00 while the change was uncommitted; after the writer's ROLLBACK it sees 1000.00
+[  20.19s] [reader isolation = REPEATABLE READ]
+[  20.19s] writer> START TRANSACTION   =>   OK, 0 row(s) affected
+[  20.20s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  20.20s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  20.20s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  20.20s] writer> ROLLBACK   =>   OK, 0 row(s) affected
+[  20.20s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  20.20s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  20.20s]       reader saw 1000.00 while the change was uncommitted; after the writer's ROLLBACK it sees 1000.00
+[  20.87s] [reader isolation = SERIALIZABLE]
+[  20.87s] writer> START TRANSACTION   =>   OK, 0 row(s) affected
+[  20.89s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  20.89s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  23.55s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   ERROR 1205: Lock wait timeout exceeded; try restarting transaction   (took 2.66s)
+[  23.55s] writer> ROLLBACK   =>   OK, 0 row(s) affected
+[  23.55s]       the reader's SELECT was blocked by the writer's uncommitted change and timed out
+[  23.55s] reader> ROLLBACK   =>   OK, 0 row(s) affected
+[  23.55s] 
+[  23.55s] --- S5-B  NON-REPEATABLE READ: does the same SELECT inside one transaction return a different value?
+[  24.12s] [reader isolation = READ UNCOMMITTED]
+[  24.12s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  24.12s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  24.12s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  24.12s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   900.00
+[  24.13s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  24.13s]       first read 1000.00, second read 900.00 inside the same transaction
+[  24.65s] [reader isolation = READ COMMITTED]
+[  24.65s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  24.65s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  24.65s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  24.66s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   900.00
+[  24.66s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  24.66s]       first read 1000.00, second read 900.00 inside the same transaction
+[  25.10s] [reader isolation = REPEATABLE READ]
+[  25.10s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  25.10s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  25.10s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  25.10s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  25.10s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  25.10s]       first read 1000.00, second read 1000.00 inside the same transaction
+[  25.72s] [reader isolation = SERIALIZABLE]
+[  25.72s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  25.72s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  28.63s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   ERROR 1205: Lock wait timeout exceeded; try restarting transaction   (took 2.90s)
+[  28.63s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  28.64s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  28.64s]       the writer was blocked by the reader's lock, so the reader's two reads were 1000.00 and 1000.00
+[  28.64s] 
+[  28.64s] --- S5-C  PHANTOM READ: does a repeated range query inside one transaction gain a new row?
+[  29.63s] [reader isolation = READ UNCOMMITTED]
+[  29.64s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  29.64s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001   =>   0
+[  29.65s] writer> INSERT INTO transfers (reference, source_account_id, destination_account_id, amount, status, failure_reason) VALUES ('P3-PH-READUNCOMMITTED', 900001, 900002, 10.00, 'FAILED', 'phantom demo')   =>   OK, 1 row(s) affected
+[  29.65s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001   =>   1
+[  29.65s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001 FOR UPDATE   =>   1
+[  29.65s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  29.65s]       plain SELECT: 0 then 1; locking read (FOR UPDATE, a 'current read'): 1
+[  30.23s] [reader isolation = READ COMMITTED]
+[  30.24s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  30.24s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001   =>   0
+[  30.24s] writer> INSERT INTO transfers (reference, source_account_id, destination_account_id, amount, status, failure_reason) VALUES ('P3-PH-READCOMMITTED', 900001, 900002, 10.00, 'FAILED', 'phantom demo')   =>   OK, 1 row(s) affected
+[  30.24s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001   =>   1
+[  30.24s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001 FOR UPDATE   =>   1
+[  30.24s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  30.24s]       plain SELECT: 0 then 1; locking read (FOR UPDATE, a 'current read'): 1
+[  31.15s] [reader isolation = REPEATABLE READ]
+[  31.15s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  31.15s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001   =>   0
+[  31.16s] writer> INSERT INTO transfers (reference, source_account_id, destination_account_id, amount, status, failure_reason) VALUES ('P3-PH-REPEATABLEREAD', 900001, 900002, 10.00, 'FAILED', 'phantom demo')   =>   OK, 1 row(s) affected
+[  31.16s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001   =>   0
+[  31.16s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001 FOR UPDATE   =>   1
+[  31.16s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  31.16s]       plain SELECT: 0 then 0; locking read (FOR UPDATE, a 'current read'): 1
+[  32.02s] [reader isolation = SERIALIZABLE]
+[  32.02s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  32.02s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001   =>   0
+[  35.69s] writer> INSERT INTO transfers (reference, source_account_id, destination_account_id, amount, status, failure_reason) VALUES ('P3-PH-SERIALIZABLE', 900001, 900002, 10.00, 'FAILED', 'phantom demo')   =>   ERROR 1205: Lock wait timeout exceeded; try restarting transaction   (took 3.67s)
+[  35.70s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001   =>   0
+[  35.70s] reader> SELECT COUNT(*) FROM transfers WHERE source_account_id = 900001 FOR UPDATE   =>   0
+[  35.70s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  35.70s]       the writer's INSERT was blocked by the reader's range lock, so the reader saw 0 then 0
+[  35.70s] 
+[  35.70s] --- S5-D  BLOCKING: does an open reader make a writer wait? (shows the cost of SERIALIZABLE)
+[  36.25s] [reader isolation = REPEATABLE READ]
+[  36.25s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  36.25s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  36.25s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  36.25s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  36.91s] [reader isolation = SERIALIZABLE]
+[  36.92s] reader> START TRANSACTION   =>   OK, 0 row(s) affected
+[  36.92s] reader> SELECT balance FROM accounts WHERE account_id = 900001   =>   1000.00
+[  40.75s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   ERROR 1205: Lock wait timeout exceeded; try restarting transaction   (took 3.83s)
+[  40.75s] reader> COMMIT   =>   OK, 0 row(s) affected
+[  40.82s] writer> UPDATE accounts SET balance = balance - 100 WHERE account_id = 900001   =>   OK, 1 row(s) affected
+[  40.82s]       after the reader committed, the same UPDATE ran at once: OK, 1 row(s) affected
+[  40.82s] 
+[  40.82s] RESULT (observed in this run, MariaDB 10.4.32 InnoDB; 'no (blocked)' = the other session had to wait and timed out):
+[  40.82s] isolation level     dirty read      non-repeatable read     phantom (plain SELECT)
+[  40.82s] READ UNCOMMITTED    YES             YES                     YES
+[  40.82s] READ COMMITTED      no              YES                     YES
+[  40.82s] REPEATABLE READ     no              no                      no
+[  40.82s] SERIALIZABLE        no (blocked)    no (blocked)            no (blocked)
+[  40.82s] writer blocked by an open reader? REPEATABLE READ: no, SERIALIZABLE: YES
+[  40.82s] CHECK PASS: S5-A READ UNCOMMITTED shows a dirty read; READ COMMITTED and REPEATABLE READ do not
+[  40.82s] CHECK PASS: S5-B READ COMMITTED gives a non-repeatable read; REPEATABLE READ does not
+[  40.82s] CHECK PASS: S5-C READ COMMITTED shows the phantom row to a plain SELECT; REPEATABLE READ hides it from a plain SELECT
+[  40.82s] CHECK PASS: S5-C at REPEATABLE READ a locking read (FOR UPDATE) DOES see the new row (current read)
+[  40.82s] CHECK PASS: S5-D SERIALIZABLE: none of the three anomalies occurred, and at least one was prevented by blocking
+[  40.82s] CHECK PASS: S5-D SERIALIZABLE reader blocks a writer (lock wait timeout 1205); REPEATABLE READ reader does not
+[  40.93s] 
+[  40.93s] Test accounts reset to their starting state.
+[  40.93s] 
+[  40.93s] ====================================================================================================
+[  40.93s] SUMMARY OF COMPUTED CHECKS
+[  40.93s] ====================================================================================================
+[  40.93s] PASS  S1-A unsafe read-modify-write LOSES an update (final balance is not 700.00)
+[  40.93s] PASS  S1-B s2's UPDATE was blocked until s1 committed
+[  40.93s] PASS  S1-B atomic relative UPDATE keeps both changes (final balance 700.00)
+[  40.93s] PASS  S1-C locking read made s2 wait, and it then saw the committed balance
+[  40.93s] PASS  S1-C read-modify-write is safe when the row is locked first (final balance 700.00)
+[  40.93s] PASS  S2-A in all 10 rounds exactly one transfer completed, one failed, balance 300.00
+[  40.95s] PASS  S2-A integrity checks pass and no money was created or lost
+[  40.96s] PASS  S2-B without a lock the second debit is stopped only by the CHECK constraint
+[  40.96s] PASS  S3 the server detected the deadlock and aborted exactly one session (error 1213)
+[  40.96s] PASS  S4-A locking in the order given produced deadlocks (error 1213)
+[  40.96s] PASS  S4-A deadlock victims left no half-done transfers (integrity ok, money conserved)
+[  40.96s] PASS  S4-B locking in id order produced zero deadlocks and all 20 transfers completed
+[  40.96s] PASS  S4-B integrity checks pass and money is conserved
+[  40.96s] PASS  S4-C all 240 requests were answered (COMPLETED or FAILED) with no ERROR/deadlock
+[  40.96s] PASS  S4-C ledger has exactly two rows per completed transfer
+[  40.96s] PASS  S4-C integrity checks pass and total money is unchanged after 240 concurrent transfers
+[  40.96s] PASS  S5-A READ UNCOMMITTED shows a dirty read; READ COMMITTED and REPEATABLE READ do not
+[  40.96s] PASS  S5-B READ COMMITTED gives a non-repeatable read; REPEATABLE READ does not
+[  40.96s] PASS  S5-C READ COMMITTED shows the phantom row to a plain SELECT; REPEATABLE READ hides it from a plain SELECT
+[  40.96s] PASS  S5-C at REPEATABLE READ a locking read (FOR UPDATE) DOES see the new row (current read)
+[  40.96s] PASS  S5-D SERIALIZABLE: none of the three anomalies occurred, and at least one was prevented by blocking
+[  40.96s] PASS  S5-D SERIALIZABLE reader blocks a writer (lock wait timeout 1205); REPEATABLE READ reader does not
+[  40.96s] 22 of 22 checks passed.

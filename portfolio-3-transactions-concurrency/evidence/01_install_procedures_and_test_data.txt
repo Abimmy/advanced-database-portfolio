@@ -1,0 +1,31 @@
+# Portfolio 3 - install of procedures and test data (real run, 2026-11-05 12:48)
+# Command: mysql -u root -n -t -vvv < 01_transfer_procedures.sql ; then < 02_test_data.sql
+
+## 01_transfer_procedures.sql
+Query OK, 0 rows affected (0.000 sec)
+DROP PROCEDURE IF EXISTS sp_transfer_funds
+Query OK, 0 rows affected (0.015 sec)
+DROP PROCEDURE IF EXISTS sp_transfer_core
+Query OK, 0 rows affected (0.011 sec)
+CREATE PROCEDURE sp_transfer_core(
+Query OK, 0 rows affected (0.014 sec)
+CREATE PROCEDURE sp_transfer_funds(
+Query OK, 0 rows affected (0.011 sec)
+exit code: 0
+
+## 02_test_data.sql
+Query OK, 0 rows affected (0.002 sec)
+DROP PROCEDURE IF EXISTS sp_p3_reset_test_data
+Query OK, 0 rows affected (0.013 sec)
+CREATE PROCEDURE sp_p3_reset_test_data()
+Query OK, 0 rows affected (0.006 sec)
+exit code: 0
+
+## procedures now stored in mikepay_db
++-----------------------+--------------+--------------------------------------------------------------------------------------------------+
+| ROUTINE_NAME          | ROUTINE_TYPE | SQL_MODE                                                                                         |
++-----------------------+--------------+--------------------------------------------------------------------------------------------------+
+| sp_p3_reset_test_data | PROCEDURE    | STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION |
+| sp_transfer_core      | PROCEDURE    | STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION |
+| sp_transfer_funds     | PROCEDURE    | STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION |
++-----------------------+--------------+--------------------------------------------------------------------------------------------------+

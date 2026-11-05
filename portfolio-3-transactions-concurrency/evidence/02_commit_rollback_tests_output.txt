@@ -1,0 +1,677 @@
+# Portfolio 3 - COMMIT / ROLLBACK tests (real run, 2026-11-05 12:50, MariaDB 10.4.32)
+# Command: mysql -u root -n -t -vvv --force < 03_commit_rollback_tests.sql
+# Note: the two ERROR 1452 lines (T6a and T6b) are intended. The client prints the error text just before the statement text.
+# mysql exit code: 0
+
+--------------
+SET SESSION sql_mode = 'STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION'
+--------------
+
+Query OK, 0 rows affected (0.021 sec)
+
+--------------
+CALL sp_p3_reset_test_data()
+--------------
+
+Query OK, 24 rows affected (0.154 sec)
+
+--------------
+SELECT '=== Starting state ===' AS step
+--------------
+
++------------------------+
+| step                   |
++------------------------+
+| === Starting state === |
++------------------------+
+1 row in set (0.016 sec)
+
+--------------
+SELECT account_id, balance, status FROM accounts WHERE account_id BETWEEN 900001 AND 900099 ORDER BY account_id
+--------------
+
++------------+---------+--------+
+| account_id | balance | status |
++------------+---------+--------+
+|     900001 | 1000.00 | ACTIVE |
+|     900002 |  500.00 | ACTIVE |
+|     900003 | 2000.00 | ACTIVE |
+|     900004 |  750.00 | ACTIVE |
+|     900005 |  100.00 | FROZEN |
++------------+---------+--------+
+5 rows in set (0.024 sec)
+
+--------------
+SELECT '=== T1: successful transfer, 250.00 from 900001 to 900002 (COMMIT) ===' AS step
+--------------
+
++------------------------------------------------------------------------+
+| step                                                                   |
++------------------------------------------------------------------------+
+| === T1: successful transfer, 250.00 from 900001 to 900002 (COMMIT) === |
++------------------------------------------------------------------------+
+1 row in set (0.046 sec)
+
+--------------
+CALL sp_transfer_funds('P3-T1', 900001, 900002, 250.00, @status, @message)
+--------------
+
+Query OK, 9 rows affected (0.070 sec)
+
+--------------
+SELECT @status AS status, @message AS message
+--------------
+
++-----------+--------------------+
+| status    | message            |
++-----------+--------------------+
+| COMPLETED | Transfer completed |
++-----------+--------------------+
+1 row in set (0.002 sec)
+
+--------------
+SELECT account_id, balance FROM accounts WHERE account_id IN (900001, 900002) ORDER BY account_id
+--------------
+
++------------+---------+
+| account_id | balance |
++------------+---------+
+|     900001 |  750.00 |
+|     900002 |  750.00 |
++------------+---------+
+2 rows in set (0.013 sec)
+
+--------------
+SELECT transfer_id, reference, source_account_id, destination_account_id, amount, status, failure_reason
+FROM transfers WHERE reference = 'P3-T1'
+--------------
+
++-------------+-----------+-------------------+------------------------+--------+-----------+----------------+
+| transfer_id | reference | source_account_id | destination_account_id | amount | status    | failure_reason |
++-------------+-----------+-------------------+------------------------+--------+-----------+----------------+
+|      111891 | P3-T1     |            900001 |                 900002 | 250.00 | COMPLETED | NULL           |
++-------------+-----------+-------------------+------------------------+--------+-----------+----------------+
+1 row in set (0.011 sec)
+
+--------------
+SELECT account_id, transfer_id, transaction_type, amount, balance_after
+FROM transactions WHERE account_id BETWEEN 900001 AND 900099 ORDER BY transaction_id
+--------------
+
++------------+-------------+------------------+--------+---------------+
+| account_id | transfer_id | transaction_type | amount | balance_after |
++------------+-------------+------------------+--------+---------------+
+|     900001 |      111891 | TRANSFER_DEBIT   | 250.00 |        750.00 |
+|     900002 |      111891 | TRANSFER_CREDIT  | 250.00 |        750.00 |
++------------+-------------+------------------+--------+---------------+
+2 rows in set (0.024 sec)
+
+--------------
+SELECT account_id, action, old_balance, new_balance FROM audit_log
+WHERE account_id IN (900001, 900002) AND action = 'BALANCE_CHANGED' ORDER BY audit_id
+--------------
+
++------------+-----------------+-------------+-------------+
+| account_id | action          | old_balance | new_balance |
++------------+-----------------+-------------+-------------+
+|     900001 | BALANCE_CHANGED |     1000.00 |      750.00 |
+|     900002 | BALANCE_CHANGED |      500.00 |      750.00 |
++------------+-----------------+-------------+-------------+
+2 rows in set (0.021 sec)
+
+--------------
+SELECT '=== T2: insufficient funds, 99999.00 from 900002 to 900001 ===' AS step
+--------------
+
++----------------------------------------------------------------+
+| step                                                           |
++----------------------------------------------------------------+
+| === T2: insufficient funds, 99999.00 from 900002 to 900001 === |
++----------------------------------------------------------------+
+1 row in set (0.018 sec)
+
+--------------
+CALL sp_transfer_funds('P3-T2', 900002, 900001, 99999.00, @status, @message)
+--------------
+
+Query OK, 3 rows affected (0.013 sec)
+
+--------------
+SELECT @status AS status, @message AS message
+--------------
+
++--------+--------------------+
+| status | message            |
++--------+--------------------+
+| FAILED | Insufficient funds |
++--------+--------------------+
+1 row in set (0.002 sec)
+
+--------------
+SELECT account_id, balance FROM accounts WHERE account_id IN (900001, 900002) ORDER BY account_id
+--------------
+
++------------+---------+
+| account_id | balance |
++------------+---------+
+|     900001 |  750.00 |
+|     900002 |  750.00 |
++------------+---------+
+2 rows in set (0.021 sec)
+
+--------------
+SELECT reference, status, failure_reason FROM transfers WHERE reference = 'P3-T2'
+--------------
+
++-----------+--------+--------------------+
+| reference | status | failure_reason     |
++-----------+--------+--------------------+
+| P3-T2     | FAILED | Insufficient funds |
++-----------+--------+--------------------+
+1 row in set (0.034 sec)
+
+--------------
+SELECT COUNT(*) AS ledger_rows_for_this_transfer
+FROM transactions x JOIN transfers t ON t.transfer_id = x.transfer_id WHERE t.reference = 'P3-T2'
+--------------
+
++-------------------------------+
+| ledger_rows_for_this_transfer |
++-------------------------------+
+|                             0 |
++-------------------------------+
+1 row in set (0.016 sec)
+
+--------------
+SELECT '=== T3: destination account is FROZEN (900005) ===' AS step
+--------------
+
++----------------------------------------------------+
+| step                                               |
++----------------------------------------------------+
+| === T3: destination account is FROZEN (900005) === |
++----------------------------------------------------+
+1 row in set (0.027 sec)
+
+--------------
+CALL sp_transfer_funds('P3-T3', 900001, 900005, 10.00, @status, @message)
+--------------
+
+Query OK, 3 rows affected (0.095 sec)
+
+--------------
+SELECT @status AS status, @message AS message
+--------------
+
++--------+-----------------------------------+
+| status | message                           |
++--------+-----------------------------------+
+| FAILED | Destination account is not active |
++--------+-----------------------------------+
+1 row in set (0.002 sec)
+
+--------------
+SELECT account_id, balance, status FROM accounts WHERE account_id IN (900001, 900005) ORDER BY account_id
+--------------
+
++------------+---------+--------+
+| account_id | balance | status |
++------------+---------+--------+
+|     900001 |  750.00 | ACTIVE |
+|     900005 |  100.00 | FROZEN |
++------------+---------+--------+
+2 rows in set (0.024 sec)
+
+--------------
+SELECT '=== T4: invalid requests are rejected and nothing is recorded ===' AS step
+--------------
+
++-------------------------------------------------------------------+
+| step                                                              |
++-------------------------------------------------------------------+
+| === T4: invalid requests are rejected and nothing is recorded === |
++-------------------------------------------------------------------+
+1 row in set (0.019 sec)
+
+--------------
+CALL sp_transfer_funds('P3-T4a', 900001, 900002, -5.00, @status, @message)
+--------------
+
+Query OK, 0 rows affected (0.023 sec)
+
+--------------
+SELECT 'negative amount' AS request, @status AS status, @message AS message
+--------------
+
++-----------------+----------+----------------------------------+
+| request         | status   | message                          |
++-----------------+----------+----------------------------------+
+| negative amount | REJECTED | Amount must be greater than zero |
++-----------------+----------+----------------------------------+
+1 row in set (0.026 sec)
+
+--------------
+CALL sp_transfer_funds('P3-T4b', 900001, 900001, 5.00, @status, @message)
+--------------
+
+Query OK, 0 rows affected (0.042 sec)
+
+--------------
+SELECT 'same account' AS request, @status AS status, @message AS message
+--------------
+
++--------------+----------+---------------------------------------------+
+| request      | status   | message                                     |
++--------------+----------+---------------------------------------------+
+| same account | REJECTED | Source and destination accounts must differ |
++--------------+----------+---------------------------------------------+
+1 row in set (0.018 sec)
+
+--------------
+CALL sp_transfer_funds('P3-T4c', 900001, 987654, 5.00, @status, @message)
+--------------
+
+Query OK, 1 row affected, 1 warning (0.013 sec)
+
+--------------
+SELECT 'unknown destination' AS request, @status AS status, @message AS message
+--------------
+
++---------------------+----------+----------------------------------------------+
+| request             | status   | message                                      |
++---------------------+----------+----------------------------------------------+
+| unknown destination | REJECTED | Source or destination account does not exist |
++---------------------+----------+----------------------------------------------+
+1 row in set (0.025 sec)
+
+--------------
+SELECT COUNT(*) AS transfer_rows_for_T4 FROM transfers WHERE reference LIKE 'P3-T4%'
+--------------
+
++----------------------+
+| transfer_rows_for_T4 |
++----------------------+
+|                    0 |
++----------------------+
+1 row in set (0.018 sec)
+
+--------------
+SELECT '=== T5: error AFTER the balances were updated: ROLLBACK inside the procedure ===' AS step
+--------------
+
++----------------------------------------------------------------------------------+
+| step                                                                             |
++----------------------------------------------------------------------------------+
+| === T5: error AFTER the balances were updated: ROLLBACK inside the procedure === |
++----------------------------------------------------------------------------------+
+1 row in set (0.020 sec)
+
+--------------
+SELECT account_id, balance FROM accounts WHERE account_id IN (900001, 900002) ORDER BY account_id
+--------------
+
++------------+---------+
+| account_id | balance |
++------------+---------+
+|     900001 |  750.00 |
+|     900002 |  750.00 |
++------------+---------+
+2 rows in set (0.012 sec)
+
+--------------
+CALL sp_transfer_funds('P3-T1', 900001, 900002, 10.00, @status, @message)
+--------------
+
+Query OK, 6 rows affected (0.042 sec)
+
+--------------
+SELECT @status AS status, @message AS message
+--------------
+
++--------+-------------------------------------------------------------------------------------------+
+| status | message                                                                                   |
++--------+-------------------------------------------------------------------------------------------+
+| ERROR  | Rolled back. MariaDB error 1062: Duplicate entry 'P3-T1' for key 'uq_transfers_reference' |
++--------+-------------------------------------------------------------------------------------------+
+1 row in set (0.001 sec)
+
+--------------
+SELECT account_id, balance FROM accounts WHERE account_id IN (900001, 900002) ORDER BY account_id
+--------------
+
++------------+---------+
+| account_id | balance |
++------------+---------+
+|     900001 |  750.00 |
+|     900002 |  750.00 |
++------------+---------+
+2 rows in set (0.024 sec)
+
+--------------
+SELECT COUNT(*) AS ledger_rows_total FROM transactions WHERE account_id BETWEEN 900001 AND 900099
+--------------
+
++-------------------+
+| ledger_rows_total |
++-------------------+
+|                 2 |
++-------------------+
+1 row in set (0.018 sec)
+
+--------------
+SELECT '=== Integrity check after T1-T5 (all problems must be 0, total must be 4350.00) ===' AS step
+--------------
+
++-------------------------------------------------------------------------------------+
+| step                                                                                |
++-------------------------------------------------------------------------------------+
+| === Integrity check after T1-T5 (all problems must be 0, total must be 4350.00) === |
++-------------------------------------------------------------------------------------+
+1 row in set (0.007 sec)
+
+--------------
+SELECT 'balance differs from latest ledger balance_after' AS check_name, COUNT(*) AS problems
+FROM accounts a JOIN transactions t ON t.account_id = a.account_id
+WHERE a.account_id BETWEEN 900001 AND 900099
+  AND t.transaction_id = (SELECT MAX(x.transaction_id) FROM transactions x WHERE x.account_id = a.account_id)
+  AND a.balance <> t.balance_after
+--------------
+
++--------------------------------------------------+----------+
+| check_name                                       | problems |
++--------------------------------------------------+----------+
+| balance differs from latest ledger balance_after |        0 |
++--------------------------------------------------+----------+
+1 row in set (0.014 sec)
+
+--------------
+SELECT SUM(balance) AS total_money FROM accounts WHERE account_id BETWEEN 900001 AND 900099
+--------------
+
++-------------+
+| total_money |
++-------------+
+|     4350.00 |
++-------------+
+1 row in set (0.011 sec)
+
+--------------
+SELECT '=== T6a: manual transaction. Debit succeeds, credit step fails, ROLLBACK ===' AS step
+--------------
+
++------------------------------------------------------------------------------+
+| step                                                                         |
++------------------------------------------------------------------------------+
+| === T6a: manual transaction. Debit succeeds, credit step fails, ROLLBACK === |
++------------------------------------------------------------------------------+
+1 row in set (0.010 sec)
+
+--------------
+SELECT account_id, balance FROM accounts WHERE account_id = 900003
+--------------
+
++------------+---------+
+| account_id | balance |
++------------+---------+
+|     900003 | 2000.00 |
++------------+---------+
+1 row in set (0.011 sec)
+
+--------------
+START TRANSACTION
+--------------
+
+Query OK, 0 rows affected (0.010 sec)
+
+--------------
+UPDATE accounts SET balance = balance - 100.00 WHERE account_id = 900003
+--------------
+
+Query OK, 1 row affected (0.009 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+--------------
+SELECT 'inside the open transaction' AS where_we_are, balance FROM accounts WHERE account_id = 900003
+--------------
+
++-----------------------------+---------+
+| where_we_are                | balance |
++-----------------------------+---------+
+| inside the open transaction | 1900.00 |
++-----------------------------+---------+
+1 row in set (0.011 sec)
+
+ERROR 1452 (23000) at line 79: Cannot add or update a child row: a foreign key constraint fails (`mikepay_db`.`transactions`, CONSTRAINT `fk_transactions_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`account_id`) ON UPDATE CASCADE)
+--------------
+INSERT INTO transactions (account_id, transfer_id, transaction_type, amount, balance_after, description)
+VALUES (999999999, NULL, 'DEPOSIT', 100.00, 100.00, 'credit leg that cannot succeed')
+--------------
+
+--------------
+SELECT 'after the failed statement, before ROLLBACK' AS where_we_are, balance FROM accounts WHERE account_id = 900003
+--------------
+
++---------------------------------------------+---------+
+| where_we_are                                | balance |
++---------------------------------------------+---------+
+| after the failed statement, before ROLLBACK | 1900.00 |
++---------------------------------------------+---------+
+1 row in set (0.001 sec)
+
+--------------
+ROLLBACK
+--------------
+
+Query OK, 0 rows affected (0.009 sec)
+
+--------------
+SELECT 'after ROLLBACK' AS where_we_are, balance FROM accounts WHERE account_id = 900003
+--------------
+
++----------------+---------+
+| where_we_are   | balance |
++----------------+---------+
+| after ROLLBACK | 2000.00 |
++----------------+---------+
+1 row in set (0.001 sec)
+
+--------------
+SELECT '=== T7: SAVEPOINT: roll back part of a transaction, commit the rest ===' AS step
+--------------
+
++-------------------------------------------------------------------------+
+| step                                                                    |
++-------------------------------------------------------------------------+
+| === T7: SAVEPOINT: roll back part of a transaction, commit the rest === |
++-------------------------------------------------------------------------+
+1 row in set (0.000 sec)
+
+--------------
+SELECT account_id, balance FROM accounts WHERE account_id IN (900003, 900004) ORDER BY account_id
+--------------
+
++------------+---------+
+| account_id | balance |
++------------+---------+
+|     900003 | 2000.00 |
+|     900004 |  750.00 |
++------------+---------+
+2 rows in set (0.008 sec)
+
+--------------
+START TRANSACTION
+--------------
+
+Query OK, 0 rows affected (0.013 sec)
+
+--------------
+UPDATE accounts SET balance = balance - 30.00 WHERE account_id = 900003
+--------------
+
+Query OK, 1 row affected (0.008 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+--------------
+UPDATE accounts SET balance = balance + 30.00 WHERE account_id = 900004
+--------------
+
+Query OK, 1 row affected (0.014 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+--------------
+SAVEPOINT after_first_step
+--------------
+
+Query OK, 0 rows affected (0.013 sec)
+
+--------------
+UPDATE accounts SET balance = balance - 50.00 WHERE account_id = 900003
+--------------
+
+Query OK, 1 row affected (0.008 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+--------------
+UPDATE accounts SET balance = balance + 50.00 WHERE account_id = 900004
+--------------
+
+Query OK, 1 row affected (0.014 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+--------------
+SELECT 'before ROLLBACK TO SAVEPOINT' AS where_we_are, account_id, balance
+FROM accounts WHERE account_id IN (900003, 900004) ORDER BY account_id
+--------------
+
++------------------------------+------------+---------+
+| where_we_are                 | account_id | balance |
++------------------------------+------------+---------+
+| before ROLLBACK TO SAVEPOINT |     900003 | 1920.00 |
+| before ROLLBACK TO SAVEPOINT |     900004 |  830.00 |
++------------------------------+------------+---------+
+2 rows in set (0.008 sec)
+
+--------------
+ROLLBACK TO SAVEPOINT after_first_step
+--------------
+
+Query OK, 0 rows affected (0.007 sec)
+
+--------------
+COMMIT
+--------------
+
+Query OK, 0 rows affected (0.018 sec)
+
+--------------
+SELECT 'after ROLLBACK TO SAVEPOINT and COMMIT' AS where_we_are, account_id, balance
+FROM accounts WHERE account_id IN (900003, 900004) ORDER BY account_id
+--------------
+
++----------------------------------------+------------+---------+
+| where_we_are                           | account_id | balance |
++----------------------------------------+------------+---------+
+| after ROLLBACK TO SAVEPOINT and COMMIT |     900003 | 1970.00 |
+| after ROLLBACK TO SAVEPOINT and COMMIT |     900004 |  780.00 |
++----------------------------------------+------------+---------+
+2 rows in set (0.006 sec)
+
+--------------
+SELECT '=== T6b: the SAME failure WITHOUT a transaction (autocommit on). Money is lost. ===' AS step
+--------------
+
++-------------------------------------------------------------------------------------+
+| step                                                                                |
++-------------------------------------------------------------------------------------+
+| === T6b: the SAME failure WITHOUT a transaction (autocommit on). Money is lost. === |
++-------------------------------------------------------------------------------------+
+1 row in set (0.004 sec)
+
+--------------
+SELECT @@autocommit AS autocommit
+--------------
+
++------------+
+| autocommit |
++------------+
+|          1 |
++------------+
+1 row in set (0.007 sec)
+
+--------------
+SELECT SUM(balance) AS total_money_before FROM accounts WHERE account_id BETWEEN 900001 AND 900099
+--------------
+
++--------------------+
+| total_money_before |
++--------------------+
+|            4350.00 |
++--------------------+
+1 row in set (0.007 sec)
+
+--------------
+UPDATE accounts SET balance = balance - 100.00 WHERE account_id = 900003
+--------------
+
+Query OK, 1 row affected (0.020 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+ERROR 1452 (23000) at line 109: Cannot add or update a child row: a foreign key constraint fails (`mikepay_db`.`transactions`, CONSTRAINT `fk_transactions_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`account_id`) ON UPDATE CASCADE)
+--------------
+INSERT INTO transactions (account_id, transfer_id, transaction_type, amount, balance_after, description)
+VALUES (999999999, NULL, 'DEPOSIT', 100.00, 100.00, 'credit leg that cannot succeed')
+--------------
+
+--------------
+SELECT SUM(balance) AS total_money_after FROM accounts WHERE account_id BETWEEN 900001 AND 900099
+--------------
+
++-------------------+
+| total_money_after |
++-------------------+
+|           4250.00 |
++-------------------+
+1 row in set (0.001 sec)
+
+--------------
+SELECT account_id, action, old_balance, new_balance FROM audit_log
+WHERE account_id = 900003 AND action = 'BALANCE_CHANGED' ORDER BY audit_id
+--------------
+
++------------+-----------------+-------------+-------------+
+| account_id | action          | old_balance | new_balance |
++------------+-----------------+-------------+-------------+
+|     900003 | BALANCE_CHANGED |     2000.00 |     1970.00 |
+|     900003 | BALANCE_CHANGED |     1970.00 |     1870.00 |
++------------+-----------------+-------------+-------------+
+2 rows in set (0.001 sec)
+
+--------------
+CALL sp_p3_reset_test_data()
+--------------
+
+Query OK, 34 rows affected (0.037 sec)
+
+--------------
+SELECT '=== Reset: test accounts restored ===' AS step
+--------------
+
++---------------------------------------+
+| step                                  |
++---------------------------------------+
+| === Reset: test accounts restored === |
++---------------------------------------+
+1 row in set (0.006 sec)
+
+--------------
+SELECT SUM(balance) AS total_money FROM accounts WHERE account_id BETWEEN 900001 AND 900099
+--------------
+
++-------------+
+| total_money |
++-------------+
+|     4350.00 |
++-------------+
+1 row in set (0.001 sec)
+
+Bye
