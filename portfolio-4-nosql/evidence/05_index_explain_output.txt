@@ -1,0 +1,45 @@
+# 05_index_explain_output.txt
+# Run:     2026-11-06 10:13:50 +0100
+# Command: m var DB_NAME='mikepay_nosql', DATA_DIR='../bulk-data' 06_index_explain.js
+# MongoDB: 9.0.4
+
+Environment: MongoDB 9.0.4 standalone, storage engine wiredTiger, WiredTiger cache max 15714 MB
+Host: x86_64, 12 cores, 32452 MB RAM, Microsoft Windows Workstation (build 26200) 10.0 (build 26200)
+Data: mikepay_nosql: customers=9008, transactions=282620, audit_events=36028
+
+Parameters: W1/W4 account_id=1001 (the account with the most ledger entries: 2218); W2 reference=MPY-20261005-0001
+
+--- W1: last 10 ledger entries for one account (the customer statement screen)
+    index: createIndex({"account_id":1,"created_at":-1})  built in 11031 ms
+    BEFORE  plan: SORT > COLLSCAN
+            keysExamined=0  docsExamined=282620  returned=10  time ms (median [min-max] of 5): 2101 [1735-2309]
+    AFTER   plan: LIMIT > FETCH > IXSCAN(ix_txn_account_created)
+            keysExamined=10  docsExamined=10  returned=10  time ms (median [min-max] of 5): 0 [0-11]
+
+--- W2: look up the ledger entries of one transfer by its reference (partial index: only rows that have a transfer)
+    index: createIndex({"transfer.reference":1}, {"partialFilterExpression":{"transfer.reference":{"$exists":true}}})  built in 3388 ms
+    BEFORE  plan: COLLSCAN
+            keysExamined=0  docsExamined=282620  returned=2  time ms (median [min-max] of 5): 1941 [1487-2548]
+    AFTER   plan: FETCH > IXSCAN(ix_txn_transfer_reference)
+            keysExamined=2  docsExamined=2  returned=2  time ms (median [min-max] of 5): 1 [0-7]
+
+--- W3: customers with a FROZEN account (query into an embedded array -> multikey index)
+    index: createIndex({"accounts.status":1})  built in 403 ms
+    BEFORE  plan: COLLSCAN
+            keysExamined=0  docsExamined=9008  returned=631  time ms (median [min-max] of 5): 118 [108-247]
+    AFTER   plan: FETCH > IXSCAN(ix_cust_account_status)
+            keysExamined=631  docsExamined=631  returned=631  time ms (median [min-max] of 5): 7 [4-10]
+
+--- W4: audit events for one account in a date range
+    index: createIndex({"account_id":1,"changed_at":1})  built in 830 ms
+    BEFORE  plan: COLLSCAN
+            keysExamined=0  docsExamined=36028  returned=2  time ms (median [min-max] of 5): 182 [139-248]
+    AFTER   plan: FETCH > IXSCAN(ix_audit_account_changed)
+            keysExamined=2  docsExamined=2  returned=2  time ms (median [min-max] of 5): 1 [1-4]
+
+Index storage cost (bytes) after the four indexes:
+  customers     data=4678635  storage=999424  totalIndexSize=622592  {"_id_":106496,"uq_customers_email":233472,"uq_customers_account_number":221184,"ix_cust_account_status":61440}
+  transactions  data=70821587  storage=20668416  totalIndexSize=7606272  {"_id_":3211264,"ix_txn_account_created":3629056,"ix_txn_transfer_reference":765952}
+  audit_events  data=7205750  storage=1191936  totalIndexSize=954368  {"_id_":405504,"ix_audit_account_changed":548864}
+
+# exit code: 0

@@ -1,0 +1,19 @@
+{
+  "max_customer_id": 8,
+  "exported_at_utc": "2026-11-06T09:09:43Z",
+  "source": "MariaDB 10.4.32-MariaDB / mikepay_db",
+  "counts": {
+    "customers": 8,
+    "transactions": 20,
+    "transfers": 6,
+    "audit_events": 28
+  },
+  "sql_customers": 8,
+  "sql_accounts": 9,
+  "sql_transactions": 20,
+  "sql_transfers": 6,
+  "sql_audit_events": 28,
+  "sql_total_balance": "1969999.50",
+  "sql_total_txn_amount": "2630001.00",
+  "sql_total_transfer_amount": "5260000.25"
+}

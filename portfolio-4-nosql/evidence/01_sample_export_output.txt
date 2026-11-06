@@ -1,0 +1,14 @@
+# 01_sample_export_output.txt
+# Run:     2026-11-06 10:08:59 +0100
+# Command: python 01_export_from_mariadb.py --max-customer-id 8 --out ../sample-data
+# MongoDB: 9.0.4
+
+Exporting customers with customer_id <= 8 from mikepay_db to ..\sample-data
+  customers.json            8
+  transactions.json        20
+  transfers.json            6
+  audit_events.json        28
+  manifest.json written
+Export complete; exported counts equal independent SQL counts.
+
+# exit code: 0

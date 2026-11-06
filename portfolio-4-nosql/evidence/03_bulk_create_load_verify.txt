@@ -1,0 +1,65 @@
+# 03_bulk_create_load_verify.txt
+# Run:     2026-11-06 10:10:30 +0100
+# Command: bash -c m () 
+{ 
+    local vars="$1" script="$2";
+    mongosh --quiet --file "$script" --eval "$vars"
+}; m "var DB_NAME='mikepay_nosql', DATA_DIR='../bulk-data'" 02_create_collections.js; m "var DB_NAME='mikepay_nosql', DATA_DIR='../bulk-data'" 03_load_data.js; m "var DB_NAME='mikepay_nosql', DATA_DIR='../bulk-data'" 04_verify_migration.js
+# MongoDB: 9.0.4
+
+Database: mikepay_nosql
+created collection customers with $jsonSchema validator (strict, action=error)
+created collection transactions with $jsonSchema validator (strict, action=error)
+created collection transfers with $jsonSchema validator (strict, action=error)
+created collection audit_events with $jsonSchema validator (strict, action=error)
+
+Collections:
+[
+  {
+    name: 'customers',
+    validationLevel: 'strict',
+    validationAction: 'error'
+  },
+  {
+    name: 'audit_events',
+    validationLevel: 'strict',
+    validationAction: 'error'
+  },
+  {
+    name: 'transactions',
+    validationLevel: 'strict',
+    validationAction: 'error'
+  },
+  {
+    name: 'transfers',
+    validationLevel: 'strict',
+    validationAction: 'error'
+  }
+]
+Indexes created so far:
+  customers: _id_, uq_customers_email, uq_customers_account_number
+  transactions: _id_
+  transfers: _id_, uq_transfers_reference
+  audit_events: _id_
+Loading ../bulk-data into database mikepay_nosql
+  customers         9008 documents inserted in 4.1 s
+  transfers        58995 documents inserted in 11.5 s
+  transactions    282620 documents inserted in 129.1 s
+  audit_events     36028 documents inserted in 21.9 s
+Load finished in 166.6 s
+Manifest: MariaDB 10.4.32-MariaDB / mikepay_db, customer_id <= 10000, exported 2026-11-06T09:02:28Z
+
+check                                      MongoDB    MariaDB (manifest)  result
+customers count                               9008                  9008  PASS
+accounts (embedded) count                    18009                 18009  PASS
+transactions count                          282620                282620  PASS
+transfers count                              58995                 58995  PASS
+audit_events count                           36028                 36028  PASS
+SUM(account balances)                9714925267.87         9714925267.87  PASS
+SUM(transaction amounts)            10425839691.91        10425839691.91  PASS
+SUM(transfer amounts)                 152809409.64          152809409.64  PASS
+orphan transactions (account_id not embedded in any customer)      0  PASS
+
+ALL CHECKS PASSED
+
+# exit code: 0

@@ -1,0 +1,275 @@
+# 04_queries_and_aggregations_output.txt
+# Run:     2026-11-06 10:13:31 +0100
+# Command: m var DB_NAME='mikepay_nosql', DATA_DIR='../bulk-data' 05_queries_and_aggregations.js
+# MongoDB: 9.0.4
+
+Database: mikepay_nosql   (customers=9008, transactions=282620, transfers=58995, audit_events=36028)
+
+=== Q1: Customer 1 with accounts and beneficiaries in ONE read (SQL: customers + accounts + beneficiaries + a join to resolve beneficiary names)
+db.customers.findOne({_id: 1})
+{
+  _id: 1,
+  first_name: 'Adaeze',
+  last_name: 'Okafor',
+  email: 'adaeze.okafor@example.com',
+  phone: '08000000001',
+  status: 'ACTIVE',
+  created_at: ISODate('2026-11-03T14:28:23.000Z'),
+  accounts: [
+    {
+      account_id: 1,
+      account_number: '1000000001',
+      account_type: 'SAVINGS',
+      currency: 'NGN',
+      balance: Decimal128('350000.00'),
+      status: 'ACTIVE',
+      opened_at: ISODate('2026-11-03T14:28:23.000Z')
+    },
+    {
+      account_id: 2,
+      account_number: '1000000002',
+      account_type: 'CURRENT',
+      currency: 'NGN',
+      balance: Decimal128('150000.00'),
+      status: 'ACTIVE',
+      opened_at: ISODate('2026-11-03T14:28:23.000Z')
+    }
+  ],
+  beneficiaries: [
+    {
+      beneficiary_id: 1,
+      nickname: 'Tunde',
+      account_number: '1000000003',
+      account_holder: 'Tunde Bello',
+      added_at: ISODate('2026-11-03T14:28:23.000Z')
+    },
+    {
+      beneficiary_id: 2,
+      nickname: 'Ibrahim rent',
+      account_number: '1000000005',
+      account_holder: 'Ibrahim Musa',
+      added_at: ISODate('2026-11-03T14:28:23.000Z')
+    }
+  ]
+}
+
+=== Q2: Find a customer by e-mail (served by the unique index uq_customers_email)
+db.customers.find({email: "tunde.bello@example.com"}, {first_name:1, last_name:1, "accounts.account_number":1})
+[
+  {
+    _id: 2,
+    first_name: 'Tunde',
+    last_name: 'Bello',
+    accounts: [
+      {
+        account_number: '1000000003'
+      }
+    ]
+  }
+]
+
+=== Q3: Five most recent ledger entries for account 1000000001 (compound index added in step 6)
+db.transactions.find({account_number: "1000000001"}).sort({created_at: -1}).limit(5)
+{
+  _id: 13,
+  type: 'TRANSFER_DEBIT',
+  amount: Decimal128('100000.00'),
+  balance_after: Decimal128('350000.00'),
+  created_at: ISODate('2026-10-05T14:00:01.000Z'),
+  transfer: {
+    reference: 'MPY-20261005-0001'
+  },
+  metadata: {
+    channel: 'WEB',
+    device: {
+      browser: 'EDGE'
+    }
+  }
+}
+{
+  _id: 10,
+  type: 'WITHDRAWAL',
+  amount: Decimal128('50000.00'),
+  balance_after: Decimal128('450000.00'),
+  created_at: ISODate('2026-10-02T10:00:00.000Z'),
+  metadata: {
+    channel: 'BRANCH',
+    branch_code: 'BR03'
+  }
+}
+{
+  _id: 1,
+  type: 'DEPOSIT',
+  amount: Decimal128('500000.00'),
+  balance_after: Decimal128('500000.00'),
+  created_at: ISODate('2026-10-01T09:00:00.000Z'),
+  metadata: {
+    channel: 'MOBILE_APP'
+  }
+}
+
+=== Q4: Customers that own at least one FROZEN account (query INTO the embedded accounts array)
+db.customers.find({"accounts.status": "FROZEN"})
+{
+  count: 631,
+  first_three: [
+    {
+      _id: 7,
+      first_name: 'Zainab',
+      last_name: 'Lawal',
+      accounts: [
+        {
+          account_number: '1000000008',
+          status: 'FROZEN'
+        }
+      ]
+    },
+    {
+      _id: 1090,
+      first_name: 'David',
+      last_name: 'Balogun',
+      accounts: [
+        {
+          account_number: '2000000090',
+          status: 'FROZEN'
+        },
+        {
+          account_number: '2000050090',
+          status: 'FROZEN'
+        }
+      ]
+    },
+    {
+      _id: 1091,
+      first_name: 'Zainab',
+      last_name: 'Okafor',
+      accounts: [
+        {
+          account_number: '2000000091',
+          status: 'FROZEN'
+        },
+        {
+          account_number: '2000050091',
+          status: 'FROZEN'
+        }
+      ]
+    }
+  ]
+}
+
+=== Q5: Flexible schema: ledger rows grouped by type and channel; fields differ by type (atm_id only exists on ATM withdrawals)
+  DEPOSIT          AGENT       entries=  29778  total=2534843910.71
+  DEPOSIT          BRANCH      entries=  29712  total=2480218053.72
+  DEPOSIT          MOBILE_APP  entries=  29546  total=2505059567.81
+  DEPOSIT          USSD        entries=  29762  total=2493511220.70
+  TRANSFER_CREDIT  MOBILE_APP  entries=   7482  total=18882914.11
+  TRANSFER_CREDIT  USSD        entries=   7416  total=18726321.78
+  TRANSFER_CREDIT  WEB         entries=   7672  total=19140491.06
+  TRANSFER_DEBIT   MOBILE_APP  entries=  13353  total=33084144.90
+  TRANSFER_DEBIT   USSD        entries=  13385  total=33533991.23
+  TRANSFER_DEBIT   WEB         entries=  13354  total=33582711.90
+  WITHDRAWAL       ATM         entries=  33557  total=84333473.94
+  WITHDRAWAL       BRANCH      entries=  33776  total=85446330.25
+  WITHDRAWAL       POS         entries=  33827  total=85476559.80
+  ATM withdrawals that carry an atm_id: 33557 of 33557 ATM withdrawals
+  Deposits that carry an atm_id (should be 0): 0
+
+=== Q6: Monthly deposits vs withdrawals (aggregation: $match -> $group on year-month -> $sort). Decimal128 sums are exact
+  2024-12  DEPOSIT     entries=  18000  total=9000000000.00
+  2025-01  DEPOSIT     entries=   4665  total=38058846.84
+  2025-01  WITHDRAWAL  entries=   4740  total=9769777.58
+  2025-02  DEPOSIT     entries=   4219  total=36167389.06
+  2025-02  WITHDRAWAL  entries=   4242  total=9125436.97
+  2025-03  DEPOSIT     entries=   4695  total=41668051.31
+  2025-03  WITHDRAWAL  entries=   4693  total=10456887.55
+  2025-04  DEPOSIT     entries=   4518  total=40729377.90
+  2025-04  WITHDRAWAL  entries=   4520  total=10258997.05
+  2025-05  DEPOSIT     entries=   4589  total=38859217.81
+  2025-05  WITHDRAWAL  entries=   4667  total=9783405.55
+  2025-06  DEPOSIT     entries=   4496  total=38798029.33
+  2025-06  WITHDRAWAL  entries=   4560  total=10030635.06
+  2025-07  DEPOSIT     entries=   4639  total=42132638.54
+  2025-07  WITHDRAWAL  entries=   4749  total=10899772.91
+  2025-08  DEPOSIT     entries=   4664  total=44347984.35
+  2025-08  WITHDRAWAL  entries=   4662  total=11093277.38
+  2025-09  DEPOSIT     entries=   4585  total=45725952.43
+  2025-09  WITHDRAWAL  entries=   4599  total=11605545.71
+  2025-10  DEPOSIT     entries=   4681  total=49043418.24
+  2025-10  WITHDRAWAL  entries=   4582  total=12037479.36
+  2025-11  DEPOSIT     entries=   4561  total=50139633.28
+  2025-11  WITHDRAWAL  entries=   4661  total=12857800.79
+  2025-12  DEPOSIT     entries=   4771  total=54437224.71
+  2025-12  WITHDRAWAL  entries=   4678  total=13224307.90
+  2026-01  DEPOSIT     entries=   4644  total=54552912.21
+  2026-01  WITHDRAWAL  entries=   4683  total=13974210.55
+  2026-02  DEPOSIT     entries=   4240  total=51783671.67
+  2026-02  WITHDRAWAL  entries=   4196  total=12990445.36
+  2026-03  DEPOSIT     entries=   4766  total=60277700.64
+  2026-03  WITHDRAWAL  entries=   4655  total=14692396.98
+  2026-04  DEPOSIT     entries=   4544  total=55451413.69
+  2026-04  WITHDRAWAL  entries=   4652  total=14225202.99
+  2026-05  DEPOSIT     entries=   4650  total=53439223.91
+  2026-05  WITHDRAWAL  entries=   4663  total=13365275.76
+  2026-06  DEPOSIT     entries=   4500  total=48508706.56
+  2026-06  WITHDRAWAL  entries=   4520  total=12108709.71
+  2026-07  DEPOSIT     entries=   4669  total=46226401.56
+  2026-07  WITHDRAWAL  entries=   4741  total=12139501.32
+  2026-08  DEPOSIT     entries=   4611  total=43754284.53
+  2026-08  WITHDRAWAL  entries=   4671  total=11120389.26
+  2026-09  DEPOSIT     entries=   4464  total=39560508.76
+  2026-09  WITHDRAWAL  entries=   4589  total=10230155.10
+  2026-10  DEPOSIT     entries=   4627  total=39970165.61
+  2026-10  WITHDRAWAL  entries=   4437  total=9266753.15
+
+=== Q7: Top 5 customers by total balance across their accounts ($unwind the embedded array, $group, $sort, $limit)
+  customer  1001  Bayo Bello             accounts=2  total_balance=7778343.70
+  customer  1002  Ibrahim Lawal          accounts=2  total_balance=3099417.97
+  customer  1003  Tunde Lawal            accounts=2  total_balance=2969861.18
+  customer  1004  David Adeyemi          accounts=2  total_balance=2675548.58
+  customer  1005  Tunde Adeyemi          accounts=2  total_balance=2454785.24
+
+=== Q8: Failed transfers with the source customer's name ($lookup = the document-database equivalent of a JOIN)
+{
+  _id: 5,
+  reference: 'MPY-20261009-0005',
+  amount: Decimal128('5000000.00'),
+  failure_reason: 'Insufficient funds',
+  source_customer: 'Ibrahim Musa'
+}
+{
+  _id: 6,
+  reference: 'MPY-20261009-0006',
+  amount: Decimal128('10000.00'),
+  failure_reason: 'Destination account frozen',
+  source_customer: 'Adaeze Okafor'
+}
+{
+  _id: 101002,
+  reference: 'MPB-00100002',
+  amount: Decimal128('2342.15'),
+  failure_reason: 'Insufficient funds',
+  source_customer: 'Zainab Balogun'
+}
+{
+  _id: 101011,
+  reference: 'MPB-00100011',
+  amount: Decimal128('3828.77'),
+  failure_reason: 'Insufficient funds',
+  source_customer: 'Bayo Balogun'
+}
+{
+  _id: 101013,
+  reference: 'MPB-00100013',
+  amount: Decimal128('2914.89'),
+  failure_reason: 'Daily limit exceeded',
+  source_customer: 'Emeka Nwosu'
+}
+  (failed transfers whose SOURCE customer is outside the exported slice, so $lookup finds nothing: 1317;
+   they are present only because their DESTINATION customer is in the slice - a limit of exporting a slice, not of MongoDB)
+
+=== Q9: Failed-transfer reasons, counted
+  Destination account frozen       1810
+  Daily limit exceeded             1792
+  Insufficient funds               1774
+
+# exit code: 0

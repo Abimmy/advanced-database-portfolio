@@ -1,0 +1,44 @@
+# 06_validation_and_atomicity_output.txt
+# Run:     2026-11-06 10:09:54 +0100
+# Command: m var DB_NAME='mikepay_nosql_sample', DATA_DIR='../sample-data' 07_validation_and_atomicity_tests.js
+# MongoDB: 9.0.4
+
+Database: mikepay_nosql_sample   MongoDB 9.0.4
+
+--- Schema validation ($jsonSchema, code 121 = DocumentValidationFailure)
+V1  PASS  balance stored as a floating-point double instead of Decimal128
+        -> rejected: code 121  - Document failed validation
+V2  PASS  required field `email` missing
+        -> rejected: code 121  - Document failed validation
+V3  PASS  account status outside ACTIVE/FROZEN/CLOSED
+        -> rejected: code 121  - Document failed validation
+V4  PASS  account number is not 10 digits
+        -> rejected: code 121  - Document failed validation
+V5  PASS  ledger amount is negative (minimum 0.01)
+        -> rejected: code 121  - Document failed validation
+V6  PASS  ledger amount is zero
+        -> rejected: code 121  - Document failed validation
+V7  PASS  unknown ledger type
+        -> rejected: code 121  - Document failed validation
+
+--- Uniqueness (code 11000 = duplicate key)
+U0  PASS  a valid new customer 900001: accepted
+U1  PASS  second customer with the same e-mail
+        -> rejected: code 11000  - E11000 duplicate key error collection: mikepay_nosql_sample.customers index: uq_customers_email dup key: { email: "t900001@example.com" }
+U2  PASS  second customer with the same account number
+        -> rejected: code 11000  - E11000 duplicate key error collection: mikepay_nosql_sample.customers index: uq_customers_account_number dup key: { accounts.account_number: "9100000001" }
+
+--- Flexible schema
+F1  PASS  ledger row with a brand-new nested field metadata.fraud_score (no ALTER TABLE, no migration): accepted
+
+--- Atomic single-document update (debit on customer 900001's account, balance 1000.00)
+A1  debit 300.00 -> matched=1 modified=1, balance now 700.00  PASS
+A2  debit 900.00 -> matched=0 modified=0, balance still 700.00  PASS (the guard in the filter refused it: insufficient funds)
+
+--- Multi-document transaction on this deployment (needed to move money between TWO customer documents)
+T1  PASS  multi-document transaction refused: code 20 IllegalOperation - Transaction numbers are only allowed on a replica set member or mongos
+    balance after the refused transaction: 700.00 (unchanged)
+
+Summary: 14 passed, 0 failed
+
+# exit code: 0

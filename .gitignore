@@ -33,3 +33,6 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+
+# Portfolio 4 bulk export (large, regenerate with scripts/01_export_from_mariadb.py)
+portfolio-4-nosql/bulk-data/

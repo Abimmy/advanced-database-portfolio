@@ -1,0 +1,21 @@
+# 07_concurrent_debits_output.txt
+# Run:     2026-11-06 10:09:57 +0100
+# Command: bash 09_concurrent_debits.sh mikepay_nosql_sample
+# MongoDB: 9.0.4
+
+Database: mikepay_nosql_sample   clients: 10   debit each: 300.00   opening balance: 1000.00
+setup done: balance 1000.00
+client 1: DEBITED (matched=1) at +0 ms
+client 2: REFUSED (matched=0) at +0 ms
+client 3: REFUSED (matched=0) at +18 ms
+client 4: REFUSED (matched=0) at +32 ms
+client 5: DEBITED (matched=1) at +0 ms
+client 6: REFUSED (matched=0) at +20 ms
+client 7: REFUSED (matched=0) at +37 ms
+client 8: DEBITED (matched=1) at +12 ms
+client 9: REFUSED (matched=0) at +29 ms
+client 10: REFUSED (matched=0) at +1 ms
+debited: 3   refused: 7   final balance: 100.00
+RESULT: PASS (exactly 3 debits, balance 100.00, never negative)
+
+# exit code: 0

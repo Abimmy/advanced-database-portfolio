@@ -1,0 +1,14 @@
+# 00_bulk_export_output.txt
+# Command: python 01_export_from_mariadb.py --max-customer-id 10000 --out ../bulk-data
+# Captured to bulk-export.log by redirecting stdout/stderr; first line is the start time, last line the exit code and end time.
+# (This file is a verbatim copy of that log plus these three header lines.)
+
+10:01:12
+Exporting customers with customer_id <= 10000 from mikepay_db to ..\bulk-data
+  customers.json         9008
+  transactions.json    282620
+  transfers.json        58995
+  audit_events.json     36028
+  manifest.json written
+Export complete; exported counts equal independent SQL counts.
+exit 0 at 10:05:15
