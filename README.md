@@ -26,7 +26,7 @@ All data is **synthetic**. No real customer, banking or credential data is used 
 | 3 | [Transactions and Concurrency](portfolio-3-transactions-concurrency/) | 7 | Implemented and tested (7 COMMIT/ROLLBACK tests, 5 multi-session concurrency scenarios); evidence is captured command output |
 | 4 | [NoSQL and Advanced Data Models](portfolio-4-nosql/) | 7 | Implemented and tested (MongoDB 9.0.4 document model migrated from MariaDB, 9,008-customer slice verified; index, validation and concurrency tests); evidence is captured command output |
 | 5 | [Distributed and Cloud Database Exercise](portfolio-5-distributed-cloud/) | 6 | Implemented and tested: 3-member MongoDB replica set on one machine (replication, failover, write concern, lost majority, transactions, stale reads). Sharding, MariaDB replication and cloud deployment are **conceptual only, not built**; evidence is captured command output |
-| - | [Final Documentation](final-documentation/) | 6 | Not started |
+| - | [Final Documentation](final-documentation/) | 6 | Draft written (2-page Word file); name/ID/email, assessor access, reflection and screenshots still to be completed by the student |
 
 Status is updated only when an activity has been implemented and tested.
 
