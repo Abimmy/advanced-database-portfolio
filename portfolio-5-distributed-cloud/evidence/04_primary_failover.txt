@@ -1,0 +1,37 @@
+# 04_primary_failover.txt
+# Run:     2026-11-09 12:45:27 +0100
+# Command: mongosh_test 04_primary_failover.js
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+primary before the crash: 127.0.0.1:27018 (election term 1)
+
+wrote and got acknowledgement (w:majority) for ids 1..50
+
+--- crash the primary on port 27018
+killed PID 39492 at t=0
+F1  PASS  a surviving member is elected PRIMARY  [new primary 27020, 15052 ms after the crash]
+F2  PASS  client writes succeed again through the same connection string  [first successful w:majority write 15100 ms after the crash, 0 failed attempt(s) in between]
+F3  PASS  the election term increased  [term 1 -> 2]
+F4  PASS  none of the 60 acknowledged writes was lost  [ids 1..60 all present on the new primary]
+
+--- write while the old primary is still down (it must catch up with this later)
+now 80 acknowledged documents; old primary 27018 is down
+replica set mikepay-rs, answered by 127.0.0.1:27019, date 2026-11-09T11:45:46.287Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  (not reachable/healthy) 0       1970-01-01T00:00:00.000Z
+  127.0.0.1:27019  SECONDARY   1       2026-11-09T11:45:46.000Z
+  127.0.0.1:27020  PRIMARY     1       2026-11-09T11:45:46.000Z
+
+--- restart the crashed member 27018
+F5  PASS  the old primary rejoins as a SECONDARY (it does not take over, no split brain)  [1533 ms after the start command]
+F6  PASS  it catches up with all 80 documents  [4653 ms after the start command]
+F7  PASS  all three members now have identical collection hashes
+replica set mikepay-rs, answered by 127.0.0.1:27018, date 2026-11-09T11:45:51.061Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  SECONDARY   1       2026-11-09T11:45:46.000Z
+  127.0.0.1:27019  SECONDARY   1       2026-11-09T11:45:46.000Z
+  127.0.0.1:27020  PRIMARY     1       2026-11-09T11:45:46.000Z
+
+Summary: 7 passed, 0 failed
+
+# exit code: 0

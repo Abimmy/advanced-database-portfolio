@@ -1,0 +1,29 @@
+# 06_multi_document_transactions.txt
+# Run:     2026-11-09 12:46:18 +0100
+# Command: mongosh_test 06_multi_document_transactions.js
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+start: A=1000.00  B=500.00  total=1500.00
+
+--- X1: a successful transfer of 250.00 (two customer documents + two ledger documents in one transaction)
+X1  PASS  the transaction commits (on the standalone server of Portfolio 4 this was refused with code 20)  [COMMITTED]
+X2  PASS  before the commit another client still sees the OLD balances and no ledger rows (isolation)  [{"A":"1000.00","B":"500.00","legs":0}]
+X3  PASS  after the commit everybody sees A=750.00, B=750.00, two ledger rows  [A=750.00 B=750.00 ledger=2]
+X4  PASS  money is conserved  [total 1500.00]
+
+--- X5: a transfer whose LAST step fails (ledger credit row with a negative amount is rejected by the validator)
+X5  PASS  the transaction is aborted  [ABORTED: Document failed validation (code 121)]
+X6  PASS  debit and credit were both undone: A=750.00, B=750.00, still 2 ledger rows  [A=750.00 B=750.00 ledger=2]
+X7  PASS  money is conserved  [total 1500.00]
+
+--- X8: insufficient funds (transfer 5000.00 from A who has 750.00)
+X8  PASS  the guarded debit refuses and the whole transaction is aborted  [ABORTED: insufficient funds or inactive account]
+
+--- X9: two transactions touch the same customer document at the same time
+X9  PASS  the second transaction is stopped at once with a WriteConflict (no waiting, no lost update)  [code 112 WriteConflict; labels ["TransientTransactionError"]]
+X10  PASS  after the first commits, the retried second transaction succeeds; balance 750.00 - 10.00 - 20.00 = 720.00  [A=720.00]
+
+cleanup done: throw-away customers 900001, 900002 and ledger rows removed
+Summary: 10 passed, 0 failed
+
+# exit code: 0

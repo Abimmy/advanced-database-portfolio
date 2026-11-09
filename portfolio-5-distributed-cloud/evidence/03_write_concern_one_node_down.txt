@@ -1,0 +1,38 @@
+# 03_write_concern_one_node_down.txt
+# Run:     2026-11-09 12:45:04 +0100
+# Command: mongosh_test 03_write_concern_one_node_down.js
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+primary 27018; the secondary that will be crashed: 27019; the secondary that stays up: 27020
+
+--- all three members up
+W1  PASS  w:majority acknowledged  [51 ms]
+W2  PASS  w:3 (every member) acknowledged  [18 ms]
+
+--- crash secondary 27019 (taskkill /F, no shutdown work)
+killed PID 14728
+replica set mikepay-rs, answered by 127.0.0.1:27018, date 2026-11-09T11:45:19.744Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  PRIMARY     1       2026-11-09T11:45:06.000Z
+  127.0.0.1:27019  (not reachable/healthy) 0       1970-01-01T00:00:00.000Z
+  127.0.0.1:27020  SECONDARY   1       2026-11-09T11:45:06.000Z
+
+--- one member down
+W3  PASS  w:1 acknowledged  [5 ms]
+W4  PASS  w:majority still acknowledged (primary + the other secondary = 2 of 3)  [6 ms]
+W5  PASS  w:3 cannot be met and times out  [3022 ms; code 64: waiting for replication timed out]
+W6  PASS  the timed-out w:3 write IS nevertheless applied on the primary (a write-concern error is not a rollback)  [documents with _id 5 on the primary: 1]
+W7  PASS  the surviving secondary still serves reads  [5 documents visible there]
+
+--- restart secondary 27019
+W8  PASS  the restarted member rejoins as SECONDARY and catches up with every write made while it was down  [SECONDARY after 1703 ms, all 5 documents present 4679 ms after the restart command]
+W9  PASS  collection hash on the restarted member equals the primary's
+replica set mikepay-rs, answered by 127.0.0.1:27018, date 2026-11-09T11:45:27.676Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  PRIMARY     1       2026-11-09T11:45:19.000Z
+  127.0.0.1:27019  SECONDARY   1       2026-11-09T11:45:06.000Z
+  127.0.0.1:27020  SECONDARY   1       2026-11-09T11:45:19.000Z
+
+Summary: 9 passed, 0 failed
+
+# exit code: 0

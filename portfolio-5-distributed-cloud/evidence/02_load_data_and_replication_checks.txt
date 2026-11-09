@@ -1,0 +1,76 @@
+# 02_load_data_and_replication_checks.txt
+# Run:     2026-11-09 12:44:57 +0100
+# Command: load_data
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+]
+Indexes created so far:
+  customers: _id_, uq_customers_email, uq_customers_account_number
+  transactions: _id_
+  transfers: _id_, uq_transfers_reference
+  audit_events: _id_
+Loading ../sample-data into database mikepay_nosql_rs
+  customers            8 documents inserted in 0.1 s
+  transfers            6 documents inserted in 0.0 s
+  transactions        20 documents inserted in 0.0 s
+  audit_events        28 documents inserted in 0.0 s
+Load finished in 0.2 s
+Manifest: MariaDB 10.4.32-MariaDB / mikepay_db, customer_id <= 8, exported 2026-11-06T09:09:43Z
+
+check                                      MongoDB    MariaDB (manifest)  result
+customers count                                  8                     8  PASS
+accounts (embedded) count                        9                     9  PASS
+transactions count                              20                    20  PASS
+transfers count                                  6                     6  PASS
+audit_events count                              28                    28  PASS
+SUM(account balances)                   1969999.50            1969999.50  PASS
+SUM(transaction amounts)                2630001.00            2630001.00  PASS
+SUM(transfer amounts)                   5260000.25            5260000.25  PASS
+orphan transactions (account_id not embedded in any customer)      0  PASS
+
+ALL CHECKS PASSED
+
+primary: 127.0.0.1:27018
+
+replica set mikepay-rs, answered by 127.0.0.1:27018, date 2026-11-09T11:45:02.753Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  PRIMARY     1       2026-11-09T11:45:00.000Z
+  127.0.0.1:27019  SECONDARY   1       2026-11-09T11:45:00.000Z
+  127.0.0.1:27020  SECONDARY   1       2026-11-09T11:45:00.000Z
+
+--- R1: every member holds the same data (dbHash = an MD5 of each collection, computed on each member separately)
+  node 27018: counts {"customers":8,"transactions":20,"transfers":6,"audit_events":28}  total balance 1969999.50
+           md5 audit_events  b2d1937a54dad31746346008cd7643a9
+           md5 customers     639e73a7ef2ca46502b3088bf87c8d97
+           md5 transactions  d41f3fd19b293b91361c56c726f0d543
+           md5 transfers     911d0375a2692f0b2b353cee5715044b
+  node 27019: counts {"customers":8,"transactions":20,"transfers":6,"audit_events":28}  total balance 1969999.50
+           md5 audit_events  b2d1937a54dad31746346008cd7643a9
+           md5 customers     639e73a7ef2ca46502b3088bf87c8d97
+           md5 transactions  d41f3fd19b293b91361c56c726f0d543
+           md5 transfers     911d0375a2692f0b2b353cee5715044b
+  node 27020: counts {"customers":8,"transactions":20,"transfers":6,"audit_events":28}  total balance 1969999.50
+           md5 audit_events  b2d1937a54dad31746346008cd7643a9
+           md5 customers     639e73a7ef2ca46502b3088bf87c8d97
+           md5 transactions  d41f3fd19b293b91361c56c726f0d543
+           md5 transfers     911d0375a2692f0b2b353cee5715044b
+R1  PASS  node 27019 collection hashes equal node 27018
+R1  PASS  node 27019 counts and balance total equal node 27018
+R1  PASS  node 27020 collection hashes equal node 27018
+R1  PASS  node 27020 counts and balance total equal node 27018
+R1  PASS  customer balance total equals the Portfolio 4 sample figure from MariaDB (1969999.50)  [1969999.50]
+
+--- R2: secondaries refuse writes (only the primary accepts them)
+R2  PASS  insert on secondary 27019 is refused  [code 10107 NotWritablePrimary: not primary]
+
+--- R3: replication lag under a write burst (20,000 documents, w:1 = acknowledged by the primary only)
+  primary acknowledged 20000 documents in 1500 ms
+  secondary 27019: 20000 of 20000 documents visible, complete 41 ms after the last acknowledgement (poll granularity about 20-30 ms)
+R3  PASS  secondary 27019 received all 20000 documents
+  secondary 27020: 20000 of 20000 documents visible, complete 64 ms after the last acknowledgement (poll granularity about 20-30 ms)
+R3  PASS  secondary 27020 received all 20000 documents
+  member optimes after the burst: 127.0.0.1:27018=2026-11-09T11:45:04.000Z  127.0.0.1:27019=2026-11-09T11:45:00.000Z  127.0.0.1:27020=2026-11-09T11:45:00.000Z
+
+Summary: 8 passed, 0 failed
+
+# exit code: 0

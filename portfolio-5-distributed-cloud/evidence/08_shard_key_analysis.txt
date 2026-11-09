@@ -1,0 +1,49 @@
+# 08_shard_key_analysis.txt
+# Run:     2026-11-09 12:46:46 +0100
+# Command: mongosh_test 08_shard_key_analysis.js
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+ledger documents analysed: 282620; hypothetical shards: 4
+
+K1  hashed account_id (all documents)
+  shard 0:   69889 documents (24.7%)  ##########
+  shard 1:   70810 documents (25.1%)  ##########
+  shard 2:   72236 documents (25.6%)  ##########
+  shard 3:   69685 documents (24.7%)  ##########
+  busiest shard holds 25.6% of 282620 documents (even split would be 25.0%); smallest 24.7%
+
+K2  range on account_id (id space 1..60000, equal-width ranges)
+  shard 0:  221223 documents (78.3%)  ###############################
+  shard 3:   61397 documents (21.7%)  #########
+  busiest shard holds 78.3% of 282620 documents (even split would be 25.0%); smallest 21.7%
+
+History runs 2024-12-31 .. 2026-10-30
+K3  range on created_at (all documents)
+  shard 0:   83891 documents (29.7%)  ############
+  shard 1:   66454 documents (23.5%)  #########
+  shard 2:   66360 documents (23.5%)  #########
+  shard 3:   65915 documents (23.3%)  #########
+  busiest shard holds 29.7% of 282620 documents (even split would be 25.0%); smallest 23.3%
+
+Write-load view: only the newest 30 days (created_at >= 2026-09-30), i.e. where NEW writes land
+
+K1w hashed account_id, newest 30 days
+  shard 0:    2907 documents (24.4%)  ##########
+  shard 1:    2934 documents (24.6%)  ##########
+  shard 2:    3138 documents (26.3%)  ###########
+  shard 3:    2945 documents (24.7%)  ##########
+  busiest shard holds 26.3% of 11924 documents (even split would be 25.0%); smallest 24.4%
+
+K3w range on created_at, newest 30 days
+  shard 3:   11924 documents (100.0%)  ########################################
+  busiest shard holds 100.0% of 11924 documents (even split would be 25.0%); smallest 100.0%
+
+Busiest account 1001: 2218 ledger documents = 0.78% of the collection, about 0.53 MB (average document 251 bytes). Default maximum chunk size is 128 MB, so one account cannot form an unsplittable "jumbo" chunk.
+
+S1  PASS  hashed account_id spreads all data evenly (busiest shard below 30%)  [25.6%]
+S2  PASS  hashed account_id also spreads the newest 30 days of writes evenly (busiest shard below 30%)  [26.3%]
+S3  PASS  range on created_at sends the newest 30 days of writes to ONE shard (hot spot: more than 90%)  [100.0%]
+
+Summary: 3 passed, 0 failed
+
+# exit code: 0

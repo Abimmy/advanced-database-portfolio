@@ -1,0 +1,81 @@
+# 00_environment_and_setup.txt
+# Run:     2026-11-09 12:43:26 +0100
+# Command: setup_environment
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+--- stopping any running members and deleting ../mongo-data
+node1 (port 27018): stopped cleanly
+node2 (port 27019): stopped cleanly
+node3 (port 27020): stopped cleanly
+--- starting the three members
+node1 (port 27018): started, PID 39492
+node2 (port 27019): started, PID 14728
+node3 (port 27020): started, PID 26308
+node1 (port 27018): running, PID 39492
+node2 (port 27019): running, PID 14728
+node3 (port 27020): running, PID 26308
+
+--- host
+OS: Microsoft Windows 11 Pro 10.0.26200
+CPU: 12th Gen Intel(R) Core(TM) i7-1265U, 12 logical processors
+RAM: 31.7 GB
+
+--- mongod-node1.conf
+# MikePay Portfolio 5 - replica set member 1 of 3 (mikepay-rs). Local coursework setup, NOT production:
+# no authentication, no TLS, all three members on one machine (so no protection against losing the machine).
+storage:
+  dbPath: C:/xampp/htdocs/Adewusi_Michael_301920446/portfolio-5-distributed-cloud/mongo-data/node1/db
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 1              # the default would let each of the 3 nodes claim about half of the 32 GB RAM
+systemLog:
+  destination: file
+  path: C:/xampp/htdocs/Adewusi_Michael_301920446/portfolio-5-distributed-cloud/mongo-data/node1/mongod.log
+  logAppend: true
+net:
+  port: 27018
+  bindIp: 127.0.0.1               # local connections only
+replication:
+  replSetName: mikepay-rs
+  oplogSizeMB: 256                # the default is sized from free disk; a fixed small size is enough here
+
+--- mongod-node2.conf
+# MikePay Portfolio 5 - replica set member 2 of 3 (mikepay-rs). Local coursework setup, NOT production:
+# no authentication, no TLS, all three members on one machine (so no protection against losing the machine).
+storage:
+  dbPath: C:/xampp/htdocs/Adewusi_Michael_301920446/portfolio-5-distributed-cloud/mongo-data/node2/db
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 1              # the default would let each of the 3 nodes claim about half of the 32 GB RAM
+systemLog:
+  destination: file
+  path: C:/xampp/htdocs/Adewusi_Michael_301920446/portfolio-5-distributed-cloud/mongo-data/node2/mongod.log
+  logAppend: true
+net:
+  port: 27019
+  bindIp: 127.0.0.1               # local connections only
+replication:
+  replSetName: mikepay-rs
+  oplogSizeMB: 256                # the default is sized from free disk; a fixed small size is enough here
+
+--- mongod-node3.conf
+# MikePay Portfolio 5 - replica set member 3 of 3 (mikepay-rs). Local coursework setup, NOT production:
+# no authentication, no TLS, all three members on one machine (so no protection against losing the machine).
+storage:
+  dbPath: C:/xampp/htdocs/Adewusi_Michael_301920446/portfolio-5-distributed-cloud/mongo-data/node3/db
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 1              # the default would let each of the 3 nodes claim about half of the 32 GB RAM
+systemLog:
+  destination: file
+  path: C:/xampp/htdocs/Adewusi_Michael_301920446/portfolio-5-distributed-cloud/mongo-data/node3/mongod.log
+  logAppend: true
+net:
+  port: 27020
+  bindIp: 127.0.0.1               # local connections only
+replication:
+  replSetName: mikepay-rs
+  oplogSizeMB: 256                # the default is sized from free disk; a fixed small size is enough here
+
+
+# exit code: 0

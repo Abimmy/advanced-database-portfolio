@@ -1,0 +1,31 @@
+# 05_no_majority_two_nodes_down.txt
+# Run:     2026-11-09 12:45:51 +0100
+# Command: mongosh_test 05_no_majority_two_nodes_down.js
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+primary 27020; both secondaries (27018, 27019) will be crashed
+
+killed PID 25588 (port 27018)
+killed PID 40464 (port 27019)
+N1  PASS  the remaining member steps down from PRIMARY because it can no longer reach a majority  [10810 ms after the crashes]
+N2  PASS  write to the surviving member is refused  [code 10107 NotWritablePrimary: not primary]
+N3  PASS  write through the replica-set connection string fails (no primary to send it to)  [5028 ms; MongoServerSelectionError: connect ECONNREFUSED 127.0.0.1:27018]
+N4  PASS  reads are still possible on the surviving member (they may be stale: it cannot confirm it is current)  [1 document(s) visible]
+replica set mikepay-rs, answered by 127.0.0.1:27020, date 2026-11-09T11:46:09.181Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  (not reachable/healthy) 0       1970-01-01T00:00:00.000Z
+  127.0.0.1:27019  (not reachable/healthy) 0       1970-01-01T00:00:00.000Z
+  127.0.0.1:27020  SECONDARY   1       2026-11-09T11:45:53.000Z
+
+--- restart both members
+N5  PASS  a primary is elected again once a majority is back  [new primary 27020, 6034 ms after the restart commands]
+N6  PASS  document 1 survived, the refused writes (2, 3) never appeared, and a new write works  [ids present: [1,4]]
+replica set mikepay-rs, answered by 127.0.0.1:27018, date 2026-11-09T11:46:18.653Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  SECONDARY   1       2026-11-09T11:46:15.000Z
+  127.0.0.1:27019  SECONDARY   1       2026-11-09T11:46:15.000Z
+  127.0.0.1:27020  PRIMARY     1       2026-11-09T11:46:15.000Z
+
+Summary: 6 passed, 0 failed
+
+# exit code: 0

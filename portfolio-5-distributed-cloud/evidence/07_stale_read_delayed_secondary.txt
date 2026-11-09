@@ -1,0 +1,37 @@
+# 07_stale_read_delayed_secondary.txt
+# Run:     2026-11-09 12:46:21 +0100
+# Command: mongosh_test 07_stale_read_delayed_secondary.js
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+primary 27020; delayed secondary 27018 (will apply changes 8 s late); normal secondary 27019
+
+reconfigured: member 27018 priority 0, secondaryDelaySecs 8
+C0  PASS  the first document reaches the delayed secondary after the delay  [8133 ms]
+
+--- the balance is changed from 100.00 to 200.00 on the primary (w:majority is acknowledged)
+acknowledged after 7 ms; now the same document is read from every member:
+
+  t(ms)   primary   normal-secondary   delayed-secondary
+      7   200.00    200.00             100.00
+    568   200.00    200.00             100.00
+   1143   200.00    200.00             100.00
+   2287   200.00    200.00             100.00
+   4526   200.00    200.00             100.00
+   6757   200.00    200.00             100.00
+   8389   200.00    200.00             200.00
+C1  PASS  right after the acknowledged write the primary returns the NEW value  [200.00]
+C2  PASS  right after the acknowledged write the delayed secondary returns the OLD value (a stale read)  [100.00]
+C3  PASS  the delayed secondary becomes consistent by itself (eventual consistency)  [visible after 8389 ms with a configured delay of 8000 ms]
+C4  PASS  the other secondary is not stale in this test  [values after the first sample all 200.00]
+
+--- restore the normal configuration
+C5  PASS  the delayed member is back to priority 1 and no delay  [priority 1, secondaryDelaySecs 0]
+replica set mikepay-rs, answered by 127.0.0.1:27018, date 2026-11-09T11:46:46.539Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  SECONDARY   1       2026-11-09T11:46:43.000Z
+  127.0.0.1:27019  SECONDARY   1       2026-11-09T11:46:43.000Z
+  127.0.0.1:27020  PRIMARY     1       2026-11-09T11:46:43.000Z
+
+Summary: 6 passed, 0 failed
+
+# exit code: 0

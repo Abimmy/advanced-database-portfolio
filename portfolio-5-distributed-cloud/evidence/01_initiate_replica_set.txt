@@ -1,0 +1,16 @@
+# 01_initiate_replica_set.txt
+# Run:     2026-11-09 12:44:40 +0100
+# Command: mongosh_test 01_initiate_replica_set.js
+# MongoDB: mongosh 2.14.1 / mongod db version v9.0.4
+
+replSetInitiate -> {"ok":1}
+primary elected: 127.0.0.1:27018 (12059 ms after replSetInitiate)
+replica set mikepay-rs, answered by 127.0.0.1:27018, date 2026-11-09T11:44:57.790Z
+  member           state       health  optime(ts)
+  127.0.0.1:27018  PRIMARY     1       2026-11-09T11:44:54.000Z
+  127.0.0.1:27019  SECONDARY   1       2026-11-09T11:44:54.000Z
+  127.0.0.1:27020  SECONDARY   1       2026-11-09T11:44:54.000Z
+config: members=3, votes=1+1+1, heartbeatIntervalMillis=2000, electionTimeoutMillis=10000, writeConcernMajorityJournalDefault=true
+PASS: one PRIMARY and two SECONDARY members
+
+# exit code: 0
