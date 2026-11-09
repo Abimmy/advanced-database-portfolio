@@ -154,6 +154,7 @@ Concurrency: [evidence/07_concurrent_debits_output.txt](evidence/07_concurrent_d
 - `explain` script crashed on `tojson`, which does not exist in `mongosh` script mode (`JSON.stringify` is used).
 - The first multi-document transaction test was refused by the *driver* (retryable-writes message) rather than by the server; reading a document first inside the transaction gets the server's own error, code 20.
 - The first concurrency run started the clients up to 8 seconds apart (mongosh start-up is slow); the start time was moved 20 seconds ahead so all clients are connected first. The captured run shows start offsets of 0–37 ms.
+- **Exit codes in the evidence files are not proof for the JavaScript scripts.** After the evidence was captured I found that `mongosh` ignores `process.exitCode`, so scripts 04, 07 and 08 always exited 0 even when a check failed. The PASS/FAIL lines in the output are the real evidence (I read all of them: every check passed). The scripts now use `quit(1)` on failure; I confirmed that script 04 exits 1 on a tampered balance and 0 on clean data, and re-ran 04, 07 and 08 on the sample database with identical PASS output. The evidence files were **not** re-captured, so their `# exit code: 0` lines for these scripts only mean "the shell command finished".
 - The chosen W2 reference differed between two runs because an unsorted `findOne` follows whichever index exists; it now takes the lowest `_id`.
 
 ## What you should be able to explain at technical verification

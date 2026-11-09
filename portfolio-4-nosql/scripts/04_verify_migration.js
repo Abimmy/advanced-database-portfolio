@@ -42,4 +42,7 @@ print("orphan transactions (account_id not embedded in any customer)".padEnd(62)
 if (orphans) failed++;
 
 print(failed === 0 ? "\nALL CHECKS PASSED" : `\n${failed} CHECK(S) FAILED`);
-if (failed) process.exitCode = 1;
+// mongosh ignores process.exitCode, so quit(1) is what gives a non-zero exit status. 08_verification_negative_test.js
+// loads this file on purpose with NO_QUIT set and reads VERIFY_FAILED instead.
+var VERIFY_FAILED = failed;
+if (failed && typeof NO_QUIT === "undefined") quit(1);

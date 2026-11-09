@@ -95,4 +95,4 @@ print(`    balance after the refused transaction: ${bal()} (unchanged)`);
 d.customers.deleteMany({ _id: { $gte: 900001 } });
 d.transactions.deleteMany({ _id: { $gte: 9000001 } });
 print(`\nSummary: ${pass} passed, ${fail} failed`);
-if (fail) process.exitCode = 1;
+if (fail) quit(1);   // mongosh ignores process.exitCode
