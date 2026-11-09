@@ -53,8 +53,6 @@ Status is updated only when an activity has been implemented and tested.
 └── README.md
 ```
 
-`.gitkeep` files only keep empty folders in Git and will be removed as real files are added.
-
 ## AI use
 
 AI assistance (Claude Code) is being used as a learning and coding aid. See [ai-use-log.md](ai-use-log.md).

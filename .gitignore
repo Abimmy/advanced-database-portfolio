@@ -36,3 +36,10 @@ __pycache__/
 
 # Portfolio 4 bulk export (large, regenerate with scripts/01_export_from_mariadb.py)
 portfolio-4-nosql/bulk-data/
+
+# Assistant/tooling instructions and the CA brief: kept locally, not part of the submission
+CLAUDE.md
+claude.md
+.claude/
+mit-8103-advanced-database-systems-ca-*.pdf
+.gitkeep
