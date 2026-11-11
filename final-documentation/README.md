@@ -1,21 +1,18 @@
 # Final Documentation (6 marks)
 
-**Status:** Draft written, **not ready to submit**. The Word document still has yellow-highlighted placeholders that only the student can fill in.
+**Status:** Written (3 pages in Word) with the student's details, individual reflection and screenshots.
 
-File: [MikePay_MIT8103_Final_Documentation.docx](MikePay_MIT8103_Final_Documentation.docx) (2 pages in Word as drafted; the brief allows 2–3).
+File: [MikePay_MIT8103_Final_Documentation.docx](MikePay_MIT8103_Final_Documentation.docx)
 
-## What is in the draft
-- Selected organisation (MikePay) with name, nature, users, major data and key operations
+## What it contains
+- Student name, ID and email; link to this repository
+- Selected organisation (MikePay): nature of the system, users, major data and key operations
 - Summary of all five portfolio activities, with figures taken from each portfolio's README and evidence files
-- GitHub repository link and the ER diagram (generated from the live schema)
-- References, and an AI Use Declaration (tool, purpose, how it was reviewed; full log in [../ai-use-log.md](../ai-use-log.md))
+- Evidence section: the ER diagram (Figure 1) and an appendix of screenshots (Figures 2 to 6) taken on 2026-11-11; the full-size originals are in each portfolio's `evidence/` folder
+- Individual technical reflection
+- AI Use Declaration (tool, purpose, how the output was reviewed; the dated log is in [../ai-use-log.md](../ai-use-log.md))
+- References and resources
 
-## Still to be completed by the student (highlighted yellow in the document)
-1. Name, student ID and email
-2. Assessor's GitHub username and invite date
-3. **Individual technical reflection**, in the student's own words (about 200 words)
-4. Own screenshots, if any (none have been taken yet)
-5. Any textbook or lecture-note source actually used
-6. Re-read the AI Use Declaration and make sure it describes what actually happened
-
-Delete the yellow instruction text after filling each item, then re-check that the document is still 3 pages or fewer.
+## Notes
+- The screenshots in the appendix are crops of the originals so the text stays readable at that size; the uncropped files are in the portfolio folders.
+- One extra screenshot (`portfolio-1-database-design/evidence/06_constraint_tests_terminal_1.png`) is waiting to be retaken after a constraint test was corrected (see the Portfolio 1 README); it is not used in the document.
