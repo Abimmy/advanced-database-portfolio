@@ -43,3 +43,4 @@ claude.md
 .claude/
 mit-8103-advanced-database-systems-ca-*.pdf
 .gitkeep
+portfolio-1-database-design/diagrams/generate_er_diagram.py

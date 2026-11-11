@@ -15,7 +15,7 @@ Design and build the relational database for **MikePay**, a simulated fintech pl
 All data is synthetic (invented names, `example.com` emails, `0800000xxxx` phone numbers).
 
 ## ER diagram
-Generated from the live database by [diagrams/generate_er_diagram.py](diagrams/generate_er_diagram.py), so it matches the real schema.
+Generated from the live database with a small helper script that I kept locally and did not include in this repository, so the diagram matches the real schema. The generated Mermaid source is included below.
 
 ![MikePay ER diagram](diagrams/mikepay_er_diagram.png)
 
@@ -55,7 +55,6 @@ Two layers work together:
 | [sql/03_sample_data.sql](sql/03_sample_data.sql) | Synthetic data in one transaction |
 | [sql/04_verification_queries.sql](sql/04_verification_queries.sql) | Shows constraints, keys, indexes and integrity checks |
 | [sql/05_constraint_tests.sql](sql/05_constraint_tests.sql) | 13 statements that must be rejected |
-| [diagrams/generate_er_diagram.py](diagrams/generate_er_diagram.py) | Builds the ER diagram from the database |
 | [normalisation.md](normalisation.md) | Normalisation explanation |
 
 ## How to run
@@ -68,7 +67,6 @@ $MYSQL -u root < sql/02_triggers.sql
 $MYSQL -u root < sql/03_sample_data.sql
 $MYSQL -u root -t < sql/04_verification_queries.sql
 $MYSQL -u root --force -n -t -vvv < sql/05_constraint_tests.sql
-python -I diagrams/generate_er_diagram.py diagrams/mikepay_er.mmd
 ```
 
 (`--force` lets the client continue after each expected error; `-n` keeps the output in order.) In PowerShell, use `Get-Content sql\01_create_schema.sql | & C:\xampp\mysql\bin\mysql.exe -u root` instead of `<`.
