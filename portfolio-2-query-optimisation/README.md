@@ -69,6 +69,7 @@ Full tables: [evidence/02_benchmark_summary.md](evidence/02_benchmark_summary.md
 | [sql/02_experiments.sql](sql/02_experiments.sql) | The 6 experiments: baseline and optimised query, with the DDL for each |
 | [sql/03_bulk_data_verification.sql](sql/03_bulk_data_verification.sql) | Integrity checks on the bulk data (every problem count must be 0) |
 | [sql/run_benchmarks.py](sql/run_benchmarks.py) | Runs the experiments, records plans, counters and times, and restores indexes |
+| [sql/04_e4_plan_demo.sql](sql/04_e4_plan_demo.sql) | Short re-run of experiment E4 (baseline vs range) with `ANALYZE`, for the screenshots; adds and then drops a temporary index |
 
 ## How to run
 Requires the Portfolio 1 schema to exist (run Portfolio 1 scripts 01–03 first). From this folder in Git Bash:
@@ -92,7 +93,14 @@ To go back to the small Portfolio 1 dataset, re-run Portfolio 1 scripts 01–03.
 | [evidence/03_benchmark_run_log.txt](evidence/03_benchmark_run_log.txt) | Harness log, ending with "Schema restored: True" |
 | [execution-plans/](execution-plans/) | EXPLAIN, ANALYZE, handler counters and run times for each of the 12 variants |
 
-These are command-line outputs, not screenshots.
+The text files are command-line outputs. The two screenshots below are from a short re-run of experiment E4 on 2026-11-11, using [sql/04_e4_plan_demo.sql](sql/04_e4_plan_demo.sql):
+
+| File | Shows |
+|---|---|
+| [04_e4_analyze_terminal_1.png](evidence/04_e4_analyze_terminal_1.png) | `ANALYZE` of the baseline `DATE(created_at) = '2026-03-15'` with the temporary `created_at` index in place: `type: ALL`, `key: NULL`, `r_rows: 780020` (the function hides the column from the index) |
+| [04_e4_analyze_terminal_2.png](evidence/04_e4_analyze_terminal_2.png) | The same question as a range: `type: range`, `key: idx_tmp_created`, `r_rows: 1094`; then the temporary index dropped and `SHOW INDEX` listing only the original indexes |
+
+`r_rows` 1,094 here and the 1,095 in the E4 results table come from two different measures (rows the plan returned vs the handler read counter), taken on different runs, so they are not expected to match exactly. The full 12-variant benchmark above is the main evidence; this re-run only confirms its E4 result. The index build took 1.3 s in this run.
 
 ## Issues met along the way
 - The first bulk-load attempt failed immediately: MariaDB's sequence tables name their column `seq`, not `n`. Fixed in the script.

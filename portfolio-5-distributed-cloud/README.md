@@ -100,7 +100,7 @@ Counting the 282,620 existing ledger documents over 4 *hypothetical* shards: has
 - **Small data.** The replicated data is the 8-customer sample plus test documents.
 - **The stale read is engineered** with a configured delay.
 - **Sharding, MariaDB replication and cloud deployment were not built.** Their section is a design discussion.
-- **Evidence is output text; no screenshots.**
+- **Evidence is mainly output text.** The one screenshot is [evidence/09_replica_set_status.png](evidence/09_replica_set_status.png), taken 2026-11-11 12:17 after restarting the three members: `rs.status()` through the replica-set connection string lists `127.0.0.1:27018 PRIMARY`, `:27019 SECONDARY` and `:27020 SECONDARY`. It shows the set running at that moment; the experiments themselves are in evidence 00 to 08.
 
 ## Issues met while building
 - A Windows path in the helper (`..\node-control.ps1`) lost its backslash inside a template string, so the first restart failed and left a node down; it now uses forward slashes. The experiment was re-run from a healthy state.

@@ -107,7 +107,11 @@ PYTHONIOENCODING=utf-8 python concurrency_tests.py > ../evidence/03_concurrency_
 | [evidence/02_commit_rollback_tests_output.txt](evidence/02_commit_rollback_tests_output.txt) | T1–T7 with every statement and result |
 | [evidence/03_concurrency_tests_output.txt](evidence/03_concurrency_tests_output.txt) | S1–S5 time-stamped log, deadlock report, isolation table, 22 computed checks |
 
-These are command-line outputs, not screenshots.
+The text files are command-line outputs. One screenshot was added from a repeat run on 2026-11-11:
+
+| File | Shows |
+|---|---|
+| [04_concurrency_summary_terminal.png](evidence/04_concurrency_summary_terminal.png) | The last 30 lines of a repeat run of `concurrency_tests.py` (output piped through `Select-Object -Last 30`): the summary of computed checks and "22 of 22 checks passed". The repeat run took 27 s against 41 s in the captured log, because timings vary between runs; the full time-stamped log is `03_concurrency_tests_output.txt` |
 
 ## Limitations
 - **Not a load test.** One laptop, the server and clients on the same machine, 8 sessions and 240 transfers in the stress test. It shows correctness under contention on a few hot rows, not performance at scale.

@@ -19,8 +19,11 @@ INSERT INTO customers (first_name, last_name, email, phone)
 VALUES ('Test', 'Duplicate', 'adaeze.okafor@example.com', '08000009999');
 
 SELECT 'TEST 3: account for a customer that does not exist (FOREIGN KEY fk_accounts_customer)' AS test;
+-- customer_id 4000000000 and account number 9999999999 are far outside any generated data
+-- (the Portfolio 2 bulk load created customer 9999 and account number 2000000001, so smaller
+-- values would no longer test the foreign key).
 INSERT INTO accounts (customer_id, account_number, account_type)
-VALUES (9999, '2000000001', 'SAVINGS');
+VALUES (4000000000, '9999999999', 'SAVINGS');
 
 SELECT 'TEST 4: transfer from an account to itself (CHECK ck_transfers_different_accounts)' AS test;
 INSERT INTO transfers (reference, source_account_id, destination_account_id, amount)
@@ -60,7 +63,7 @@ SELECT 'TEST 13: NULL in a NOT NULL column' AS test;
 INSERT INTO customers (first_name, last_name, email, phone)
 VALUES ('Test', 'NoEmail', NULL, '08000009997');
 
-SELECT 'AFTER TESTS: row counts must be unchanged (8, 9, 6 transfers)' AS check_name;
+SELECT 'AFTER TESTS: row counts must be unchanged from before the tests (8, 9, 6 on the Portfolio 1 data only)' AS check_name;
 SELECT (SELECT COUNT(*) FROM customers) AS customers,
        (SELECT COUNT(*) FROM accounts)  AS accounts,
        (SELECT COUNT(*) FROM transfers) AS transfers,

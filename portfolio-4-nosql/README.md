@@ -134,7 +134,7 @@ Concurrency: [evidence/07_concurrent_debits_output.txt](evidence/07_concurrent_d
 - **Timings vary between runs** (index build times and load times differed noticeably between runs); the explain tables report median and range for that reason.
 - **Synthetic `metadata`** is generated, not real.
 - **Concurrency test** uses 10 clients on one machine, not a production workload.
-- **No screenshots yet.** Evidence is captured command output. Compass screenshots of the `customers` document and the explain plan can be added by the student.
+- **Only one screenshot.** Evidence is mainly captured command output. The one screenshot is a Compass view of one `customers` document (below); there is no Compass screenshot of an explain plan.
 
 ## Evidence files
 | File | Content |
@@ -148,6 +148,7 @@ Concurrency: [evidence/07_concurrent_debits_output.txt](evidence/07_concurrent_d
 | [06_validation_and_atomicity_output.txt](evidence/06_validation_and_atomicity_output.txt) | 14 validation/atomicity checks |
 | [07_concurrent_debits_output.txt](evidence/07_concurrent_debits_output.txt) | 10 concurrent clients |
 | [08_negative_verification_output.txt](evidence/08_negative_verification_output.txt) | Tamper test of the verification |
+| [09_compass_customer_document.png](evidence/09_compass_customer_document.png) | Screenshot (2026-11-11): MongoDB Compass on `mikepay_nosql.customers`, filter `{"_id": 1}`: one document holding the customer profile with its two `accounts` and two `beneficiaries` embedded (this is the 8-customer sample data, `_id` 1) |
 
 ## Issues met while building
 - The first bulk export used one `ORDER BY` + multi-way join over the 780k ledger rows and ran for more than 7 minutes before I stopped it. It now scans each table by primary-key range and resolves accounts and transfers from in-memory lookups; the sample output was byte-identical before and after the change.

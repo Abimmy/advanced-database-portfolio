@@ -74,7 +74,7 @@ $MYSQL -u root --force -n -t -vvv < sql/05_constraint_tests.sql
 Script 01 drops and recreates the six MikePay tables, so it resets the database.
 
 ## Evidence (captured from real runs)
-All files in [evidence/](evidence/) are raw output from the scripts above, run on 2026-11-03. They are command-line output, not screenshots.
+The `.txt` and `.sql` files in [evidence/](evidence/) are raw output from the scripts above, run on 2026-11-03. The `.png` files are screenshots I took on 2026-11-11 (see the table).
 
 | File | Shows |
 |---|---|
@@ -82,6 +82,8 @@ All files in [evidence/](evidence/) are raw output from the scripts above, run o
 | [02_verification_output.txt](evidence/02_verification_output.txt) | Constraints, foreign keys, CHECKs, indexes, integrity checks, audit trail |
 | [03_constraint_tests_output.txt](evidence/03_constraint_tests_output.txt) | All 13 rule-breaking statements rejected, with the error codes |
 | [04_actual_schema_dump_no_data.sql](evidence/04_actual_schema_dump_no_data.sql) | `mysqldump --no-data` of the live schema (6 tables, 2 triggers) |
+| [05_phpmyadmin_designer.png](evidence/05_phpmyadmin_designer.png) | Screenshot (2026-11-11): phpMyAdmin Designer view of the live `mikepay_db`, showing the six tables, their keys and the foreign-key relationships |
+| [06_constraint_tests_terminal_2.png](evidence/06_constraint_tests_terminal_2.png) | Screenshot (2026-11-11): constraint tests 5 to 9 being rejected (error 4025, 1451, 1265), run on the database after the Portfolio 2 bulk load |
 
 ## Findings
 - All six tables and both triggers were created with no errors. The `PRIMARY` name warning seen on the first run was removed by dropping the unused `pk_` names.
@@ -98,6 +100,7 @@ All files in [evidence/](evidence/) are raw output from the scripts above, run o
 - **Single currency.** `currency` is stored but all data is NGN, and nothing prevents cross-currency transfers.
 - **Failed INSERTs consume AUTO_INCREMENT values**, so ids created after running the constraint tests may skip numbers.
 - **Sample data is tiny.** Portfolio 2 will need a much larger dataset to show index effects.
+- **A test that stopped testing what it claimed (found on 2026-11-11).** When I re-ran the constraint tests for a screenshot, after the Portfolio 2 bulk load, TEST 3 (foreign key) was rejected with a *duplicate key* error instead of a foreign-key error: the bulk data already contains customer 9999 and account number `2000000001`, so the old values collided with real rows. Had the account number been unused, the statement would have created an account for customer 9999. Row counts were unchanged (50,010 customers, 80,014 accounts). I changed TEST 3 to use customer id 4000000000 and account number `9999999999`, re-ran all 13 tests (all rejected, TEST 3 now error 1452) and confirmed the counts were unchanged. The captured `03_constraint_tests_output.txt` is from 2026-11-03, before the bulk load, with the original values (error 1452 at that time); it was not re-captured.
 
 ## What I should be able to explain in verification
 - Why `DECIMAL` and not `FLOAT` for money.
