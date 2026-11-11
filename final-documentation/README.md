@@ -15,4 +15,3 @@ File: [MikePay_MIT8103_Final_Documentation.docx](MikePay_MIT8103_Final_Documenta
 
 ## Notes
 - The screenshots in the appendix are crops of the originals so the text stays readable at that size; the uncropped files are in the portfolio folders.
-- One extra screenshot (`portfolio-1-database-design/evidence/06_constraint_tests_terminal_1.png`) is waiting to be retaken after a constraint test was corrected (see the Portfolio 1 README); it is not used in the document.
