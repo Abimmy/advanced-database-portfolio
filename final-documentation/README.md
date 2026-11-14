@@ -2,7 +2,7 @@
 
 **Status:** Written (3 pages in Word) with the student's details, individual reflection and screenshots.
 
-File: [MikePay_MIT8103_Final_Documentation.docx](MikePay_MIT8103_Final_Documentation.docx)
+File: [Adewusi_Michael_301920446_Final_Documentation.docx](Adewusi_Michael_301920446_Final_Documentation.docx)
 
 ## What it contains
 - Student name, ID and email; link to this repository
